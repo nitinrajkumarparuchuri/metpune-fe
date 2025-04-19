@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   Table,
@@ -11,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { FileText } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { useNavigate } from 'react-router-dom';
 
 interface Team {
   id: string;
@@ -21,7 +21,6 @@ interface Team {
   files: string[];
 }
 
-// Mock data - in a real app, this would come from an API
 const mockTeams: Record<string, Team[]> = {
   '1': [
     { id: '1', name: 'Team Alpha', presentationTitle: 'AI Healthcare Assistant', status: 'Completed', score: 85, files: ['presentation.pdf', 'demo.mp4'] },
@@ -44,11 +43,10 @@ interface HackathonDetailsProps {
 
 const HackathonDetails = ({ hackathonId, type }: HackathonDetailsProps) => {
   const [selectedTeam, setSelectedTeam] = React.useState<Team | null>(null);
+  const navigate = useNavigate();
   const teams = mockTeams[hackathonId] || [];
   
-  // Simplified condition to check if the type contains "in progress" (case insensitive)
   const showEvaluateButton = type.toLowerCase().includes('in progress');
-  console.log("Hackathon type:", type, "Should show evaluate button:", showEvaluateButton);
 
   return (
     <div className="space-y-6">
@@ -91,13 +89,13 @@ const HackathonDetails = ({ hackathonId, type }: HackathonDetailsProps) => {
           <Button 
             size="lg" 
             className="w-full py-6 text-lg font-semibold bg-purple-600 hover:bg-purple-700"
+            onClick={() => navigate('/judgement-criteria')}
           >
             Evaluate Hackathon
           </Button>
         </div>
       )}
 
-      {/* Files Dialog */}
       <Dialog open={!!selectedTeam} onOpenChange={() => setSelectedTeam(null)}>
         <DialogContent>
           <DialogHeader>
