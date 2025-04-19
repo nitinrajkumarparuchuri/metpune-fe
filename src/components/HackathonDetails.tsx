@@ -45,7 +45,7 @@ interface HackathonDetailsProps {
 const HackathonDetails = ({ hackathonId, type }: HackathonDetailsProps) => {
   const [selectedTeam, setSelectedTeam] = React.useState<Team | null>(null);
   const teams = mockTeams[hackathonId] || [];
-  const showEvaluateButton = type === 'In Progress';
+  const showEvaluateButton = type.toLowerCase() === 'in progress';
 
   return (
     <div className="space-y-4">
@@ -84,8 +84,10 @@ const HackathonDetails = ({ hackathonId, type }: HackathonDetailsProps) => {
       </div>
 
       {showEvaluateButton && (
-        <div className="flex justify-end mt-4">
-          <Button>Evaluate</Button>
+        <div className="flex justify-end mt-6">
+          <Button size="lg" className="w-full">
+            Evaluate Hackathon
+          </Button>
         </div>
       )}
 

@@ -45,10 +45,10 @@ const HackathonCard = ({ hackathon }: HackathonCardProps) => {
             <div className="text-sm text-gray-600">Insights</div>
           </div>
         </div>
-        <div className="flex justify-center">
+        <div className="mt-auto">
           <Button 
             variant="outline" 
-            className="w-full"
+            className="w-full flex items-center justify-center"
             onClick={() => setIsOpen(true)}
           >
             View Details <ChevronRight className="h-4 w-4 ml-2" />
