@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { FileText } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 interface Team {
   id: string;
@@ -99,6 +99,7 @@ const HackathonDetails = ({ hackathonId, type }: HackathonDetailsProps) => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{selectedTeam?.name} - Files</DialogTitle>
+            <DialogDescription>Review submitted files</DialogDescription>
           </DialogHeader>
           <ul className="space-y-2">
             {selectedTeam?.files.map((file, index) => (
