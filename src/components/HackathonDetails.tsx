@@ -45,7 +45,9 @@ interface HackathonDetailsProps {
 const HackathonDetails = ({ hackathonId, type }: HackathonDetailsProps) => {
   const [selectedTeam, setSelectedTeam] = React.useState<Team | null>(null);
   const teams = mockTeams[hackathonId] || [];
-  const showEvaluateButton = type.toLowerCase() === 'in progress';
+  
+  // Fix the condition to match any of the following: "in progress", "inProgress", or "In Progress"
+  const showEvaluateButton = type.toLowerCase().replace(/\s+/g, '') === 'inprogress';
 
   return (
     <div className="space-y-6">
