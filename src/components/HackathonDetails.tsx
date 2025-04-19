@@ -48,7 +48,7 @@ const HackathonDetails = ({ hackathonId, type }: HackathonDetailsProps) => {
   const showEvaluateButton = type.toLowerCase() === 'in progress';
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -84,8 +84,11 @@ const HackathonDetails = ({ hackathonId, type }: HackathonDetailsProps) => {
       </div>
 
       {showEvaluateButton && (
-        <div className="flex justify-end mt-6">
-          <Button size="lg" className="w-full">
+        <div className="mt-8">
+          <Button 
+            size="lg" 
+            className="w-full py-6 text-lg font-semibold"
+          >
             Evaluate Hackathon
           </Button>
         </div>
