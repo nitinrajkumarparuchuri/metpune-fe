@@ -1,7 +1,10 @@
+
 import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Plus, X, ArrowRight } from 'lucide-react';
+import { Plus, X, ArrowRight, Loader } from 'lucide-react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Progress } from '@/components/ui/progress';
 
 interface FilterWithWeightage {
   name: string;
@@ -11,6 +14,7 @@ interface FilterWithWeightage {
 const JudgementCriteria = () => {
   const [filters, setFilters] = useState<FilterWithWeightage[]>([]);
   const [inputValue, setInputValue] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const suggestedFilters = [
     'AI through out the SDLC',
@@ -45,6 +49,15 @@ const JudgementCriteria = () => {
     if (e.key === 'Enter' && inputValue.trim()) {
       addFilter(inputValue);
     }
+  };
+
+  const handleProceed = () => {
+    setIsLoading(true);
+    // Simulate loading for 3 seconds
+    setTimeout(() => {
+      setIsLoading(false);
+      // Handle navigation or next step here
+    }, 3000);
   };
 
   return (
@@ -123,15 +136,39 @@ const JudgementCriteria = () => {
         </div>
       </div>
 
-      {/* Proceed button */}
+      {/* Proceed button - Made more prominent */}
       {filters.length > 0 && (
-        <div className="mt-8">
-          <Button className="w-full sm:w-auto">
+        <div className="mt-8 flex justify-center">
+          <Button 
+            onClick={handleProceed} 
+            className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white"
+          >
             Proceed to Judge
-            <ArrowRight className="ml-2" />
+            <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
         </div>
       )}
+
+      {/* Loading Dialog */}
+      <Dialog open={isLoading} onOpenChange={setIsLoading}>
+        <DialogContent className="sm:max-w-md flex flex-col items-center justify-center p-6 bg-white rounded-lg">
+          <div className="flex flex-col items-center space-y-4 py-6">
+            <div className="relative h-24 w-24">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Loader className="h-10 w-10 text-purple-600 animate-spin" />
+              </div>
+              <Progress 
+                className="h-4 w-full absolute bottom-0 bg-purple-100" 
+                value={66} 
+              />
+            </div>
+            <p className="text-center text-lg font-medium mt-4">Loading…</p>
+            <p className="text-center text-gray-500">
+              Just enough time to stretch or question your life choices.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
