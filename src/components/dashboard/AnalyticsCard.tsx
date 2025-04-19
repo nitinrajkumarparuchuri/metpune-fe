@@ -15,9 +15,14 @@ const AnalyticsCard = ({ title, subtitle, children }: AnalyticsCardProps) => {
       <h3 className="text-lg font-semibold mb-2">{title}</h3>
       <p className="text-sm text-gray-600 mb-4">{subtitle}</p>
       <div className="h-[200px]">
-        <ResponsiveContainer width="100%" height="100%">
-          {children}
-        </ResponsiveContainer>
+        {/* Ensure children is rendered directly if it's not a valid React element for ResponsiveContainer */}
+        {React.isValidElement(children) ? (
+          <ResponsiveContainer width="100%" height="100%">
+            {children}
+          </ResponsiveContainer>
+        ) : (
+          children
+        )}
       </div>
     </Card>
   );
