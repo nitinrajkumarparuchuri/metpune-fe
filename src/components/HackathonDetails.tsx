@@ -46,8 +46,9 @@ const HackathonDetails = ({ hackathonId, type }: HackathonDetailsProps) => {
   const [selectedTeam, setSelectedTeam] = React.useState<Team | null>(null);
   const teams = mockTeams[hackathonId] || [];
   
-  // Fix the condition to match any of the following: "in progress", "inProgress", or "In Progress"
-  const showEvaluateButton = type.toLowerCase().replace(/\s+/g, '') === 'inprogress';
+  // Simplified condition to check if the type contains "in progress" (case insensitive)
+  const showEvaluateButton = type.toLowerCase().includes('in progress');
+  console.log("Hackathon type:", type, "Should show evaluate button:", showEvaluateButton);
 
   return (
     <div className="space-y-6">

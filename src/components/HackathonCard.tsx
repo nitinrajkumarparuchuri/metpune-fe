@@ -20,7 +20,7 @@ interface HackathonCardProps {
 
 const HackathonCard = ({ hackathon }: HackathonCardProps) => {
   const [isOpen, setIsOpen] = React.useState(false);
-
+  
   return (
     <>
       <Card className="p-4 bg-white flex flex-col h-full">
