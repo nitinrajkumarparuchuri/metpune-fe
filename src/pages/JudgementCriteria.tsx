@@ -1,8 +1,7 @@
-
 import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, ArrowRight } from 'lucide-react';
 
 interface FilterWithWeightage {
   name: string;
@@ -123,6 +122,16 @@ const JudgementCriteria = () => {
           ))}
         </div>
       </div>
+
+      {/* Proceed button */}
+      {filters.length > 0 && (
+        <div className="mt-8">
+          <Button className="w-full sm:w-auto">
+            Proceed to Judge
+            <ArrowRight className="ml-2" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
