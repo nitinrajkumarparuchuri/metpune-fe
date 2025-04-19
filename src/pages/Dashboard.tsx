@@ -25,7 +25,7 @@ const mockHackathons = {
       teams: 8,
       presentations: 10,
       insights: 15,
-      status: 'in progress', // Updated to match expected format
+      status: 'in progress',
     }
   ],
   upcoming: [
@@ -36,7 +36,7 @@ const mockHackathons = {
       teams: 10,
       presentations: 14,
       insights: 18,
-      status: 'completed',
+      status: 'coming soon',
     }
   ]
 };

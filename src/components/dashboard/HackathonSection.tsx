@@ -18,9 +18,9 @@ interface HackathonSectionProps {
 
 const HackathonSection = ({ title, bgColor, hackathons }: HackathonSectionProps) => {
   return (
-    <div className={`${bgColor} p-6 rounded-lg`}>
+    <div className={`${bgColor} p-6 rounded-lg flex flex-col`}>
       <h2 className="text-xl font-semibold mb-4">{title}</h2>
-      <div className="space-y-4">
+      <div className="flex-1 space-y-4">
         {hackathons.map(hackathon => (
           <HackathonCard key={hackathon.id} hackathon={hackathon} />
         ))}
