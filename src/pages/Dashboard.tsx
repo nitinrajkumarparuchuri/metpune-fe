@@ -3,31 +3,36 @@ import React, { useState } from 'react';
 import Header from '@/components/Header';
 import TeamCard from '@/components/TeamCard';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
 
-const mockTeams = [
-  {
-    id: '1',
-    name: 'Team Alpha',
-    project: 'EcoTrack',
-    status: 'success',
-    summary: 'An AI-powered sustainability tracker that helps businesses monitor and reduce their carbon footprint through real-time analytics.',
-  },
-  {
-    id: '2',
-    name: 'Digital Nomads',
-    project: 'RemoteFlow',
-    status: 'processing',
-    summary: 'A collaborative workspace platform designed specifically for distributed teams with integrated AI assistance.',
-  },
-  {
-    id: '3',
-    name: 'CodeCrafters',
-    project: 'DevMentor',
-    status: 'pending',
-    summary: 'An intelligent coding companion that provides real-time suggestions and best practices while you code.',
-  },
-] as const;
+const mockTeams = {
+  inProgress: [
+    {
+      id: '1',
+      name: 'Team Alpha',
+      project: 'EcoTrack',
+      status: 'processing',
+      summary: 'An AI-powered sustainability tracker that helps businesses monitor and reduce their carbon footprint through real-time analytics.',
+    },
+  ],
+  upcoming: [
+    {
+      id: '2',
+      name: 'Digital Nomads',
+      project: 'RemoteFlow',
+      status: 'pending',
+      summary: 'A collaborative workspace platform designed specifically for distributed teams with integrated AI assistance.',
+    },
+  ],
+  past: [
+    {
+      id: '3',
+      name: 'CodeCrafters',
+      project: 'DevMentor',
+      status: 'success',
+      summary: 'An intelligent coding companion that provides real-time suggestions and best practices while you code.',
+    },
+  ],
+} as const;
 
 const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -61,11 +66,35 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {mockTeams.map((team) => (
-              <TeamCard key={team.id} team={team} />
-            ))}
-          </div>
+          {/* In Progress Hackathons */}
+          <section className="mb-12">
+            <h2 className="text-2xl font-bold mb-6 text-purple-600">In Progress Hackathons</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {mockTeams.inProgress.map((team) => (
+                <TeamCard key={team.id} team={team} />
+              ))}
+            </div>
+          </section>
+
+          {/* Upcoming Hackathons */}
+          <section className="mb-12">
+            <h2 className="text-2xl font-bold mb-6 text-blue-500">Upcoming Hackathons</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {mockTeams.upcoming.map((team) => (
+                <TeamCard key={team.id} team={team} />
+              ))}
+            </div>
+          </section>
+
+          {/* Past Hackathons */}
+          <section className="mb-12">
+            <h2 className="text-2xl font-bold mb-6 text-gray-600">Past Hackathons</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {mockTeams.past.map((team) => (
+                <TeamCard key={team.id} team={team} />
+              ))}
+            </div>
+          </section>
         </div>
       </main>
     </div>
