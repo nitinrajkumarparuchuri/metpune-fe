@@ -87,7 +87,7 @@ const HackathonDetails = ({ hackathonId, type }: HackathonDetailsProps) => {
         <div className="mt-8">
           <Button 
             size="lg" 
-            className="w-full py-6 text-lg font-semibold"
+            className="w-full py-6 text-lg font-semibold bg-purple-600 hover:bg-purple-700"
           >
             Evaluate Hackathon
           </Button>
