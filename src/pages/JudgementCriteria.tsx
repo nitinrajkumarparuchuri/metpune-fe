@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Plus, X, ArrowRight, Loader } from 'lucide-react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 
 interface FilterWithWeightage {
@@ -152,6 +152,7 @@ const JudgementCriteria = () => {
       {/* Loading Dialog */}
       <Dialog open={isLoading} onOpenChange={setIsLoading}>
         <DialogContent className="sm:max-w-md flex flex-col items-center justify-center p-6 bg-white rounded-lg">
+          <DialogTitle className="sr-only">Loading</DialogTitle>
           <div className="flex flex-col items-center space-y-4 py-6">
             <div className="relative h-24 w-24">
               <div className="absolute inset-0 flex items-center justify-center">
