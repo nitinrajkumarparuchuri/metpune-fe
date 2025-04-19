@@ -18,15 +18,29 @@ interface HackathonCardProps {
   };
 }
 
+const getStatusStyles = (status: string) => {
+  switch (status.toLowerCase()) {
+    case 'completed':
+      return 'text-green-600 bg-green-100';
+    case 'in progress':
+      return 'text-blue-600 bg-blue-100';
+    case 'coming soon':
+      return 'text-yellow-600 bg-yellow-100';
+    default:
+      return 'text-gray-600 bg-gray-100';
+  }
+};
+
 const HackathonCard = ({ hackathon }: HackathonCardProps) => {
   const [isOpen, setIsOpen] = React.useState(false);
+  const statusStyles = getStatusStyles(hackathon.status);
   
   return (
     <>
       <Card className="p-4 bg-white flex flex-col h-full">
         <div className="flex justify-between items-start mb-2">
           <h3 className="text-lg font-semibold">{hackathon.name}</h3>
-          <span className="text-green-600 text-sm font-medium bg-green-100 px-2 py-1 rounded">
+          <span className={`${statusStyles} text-sm font-medium px-2 py-1 rounded`}>
             {hackathon.status}
           </span>
         </div>
@@ -69,3 +83,4 @@ const HackathonCard = ({ hackathon }: HackathonCardProps) => {
 };
 
 export default HackathonCard;
+
