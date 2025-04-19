@@ -1,12 +1,43 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import Header from '@/components/Header';
+import FileUpload from '@/components/FileUpload';
 
 const Index = () => {
+  const navigate = useNavigate();
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
-      </div>
+    <div className="min-h-screen flex flex-col">
+      <Header />
+      <main className="flex-1 pt-16">
+        {/* Hero Section */}
+        <section className="container mx-auto px-4 py-24 md:py-32">
+          <div className="max-w-4xl mx-auto text-center space-y-8">
+            <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-purple-600 to-blue-500 bg-clip-text text-transparent">
+              Let AI Decode Your Hackathon
+            </h1>
+            <p className="text-xl md:text-2xl text-gray-600">
+              Auto-transcribe, summarize, and analyze your hackathon presentations — zero manual effort.
+            </p>
+            <Button 
+              size="lg"
+              className="bg-purple-600 hover:bg-purple-700 text-lg px-8"
+              onClick={() => navigate('/dashboard')}
+            >
+              Get Started
+            </Button>
+          </div>
+        </section>
+
+        {/* Upload Section */}
+        <section className="container mx-auto px-4 py-16">
+          <div className="max-w-2xl mx-auto">
+            <FileUpload />
+          </div>
+        </section>
+      </main>
     </div>
   );
 };
