@@ -4,8 +4,13 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Plus, X } from 'lucide-react';
 
+interface FilterWithWeightage {
+  name: string;
+  weightage: number;
+}
+
 const JudgementCriteria = () => {
-  const [filters, setFilters] = useState<string[]>([]);
+  const [filters, setFilters] = useState<FilterWithWeightage[]>([]);
   const [inputValue, setInputValue] = useState('');
 
   const suggestedFilters = [
@@ -18,14 +23,23 @@ const JudgementCriteria = () => {
   ];
 
   const addFilter = (filter: string) => {
-    if (!filters.includes(filter) && filter.trim() !== '') {
-      setFilters([...filters, filter]);
+    if (!filters.some(f => f.name === filter) && filter.trim() !== '') {
+      setFilters([...filters, { name: filter, weightage: 12 }]);
       setInputValue('');
     }
   };
 
   const removeFilter = (filterToRemove: string) => {
-    setFilters(filters.filter(filter => filter !== filterToRemove));
+    setFilters(filters.filter(filter => filter.name !== filterToRemove));
+  };
+
+  const updateWeightage = (filterName: string, value: string) => {
+    const numValue = parseFloat(value) || 0;
+    setFilters(filters.map(filter => 
+      filter.name === filterName 
+        ? { ...filter, weightage: numValue } 
+        : filter
+    ));
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -59,23 +73,34 @@ const JudgementCriteria = () => {
         </Button>
       </div>
 
-      {/* Selected filters */}
+      {/* Selected filters with weightage */}
       {filters.length > 0 && (
         <div className="mb-6">
           <h2 className="text-sm text-gray-600 mb-2">Selected Filters:</h2>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2">
             {filters.map((filter, index) => (
               <div
                 key={index}
-                className="flex items-center gap-1 bg-purple-100 text-purple-700 px-3 py-1 rounded-full"
+                className="flex items-center gap-3 bg-purple-100 text-purple-700 px-4 py-2 rounded-lg"
               >
-                <span>{filter}</span>
-                <button
-                  onClick={() => removeFilter(filter)}
-                  className="hover:text-purple-900"
-                >
-                  <X className="h-3 w-3" />
-                </button>
+                <span className="flex-1">{filter.name}</span>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    value={filter.weightage}
+                    onChange={(e) => updateWeightage(filter.name, e.target.value)}
+                    className="w-20 h-8 text-sm"
+                    min="0"
+                    max="100"
+                  />
+                  <span className="text-sm">%</span>
+                  <button
+                    onClick={() => removeFilter(filter.name)}
+                    className="hover:text-purple-900 ml-2"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -91,7 +116,7 @@ const JudgementCriteria = () => {
               key={index}
               onClick={() => addFilter(filter)}
               className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-full transition-colors"
-              disabled={filters.includes(filter)}
+              disabled={filters.some(f => f.name === filter)}
             >
               {filter}
             </button>
