@@ -8,9 +8,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { FileText } from 'lucide-react';
+import { FileText, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useNavigate } from 'react-router-dom';
+import { useTeamSummaries, useTeamEvaluations } from '@/hooks/use-data';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface Team {
   id: string;
@@ -21,21 +23,6 @@ interface Team {
   files: string[];
 }
 
-const mockTeams: Record<string, Team[]> = {
-  '1': [
-    { id: '1', name: 'Team Alpha', presentationTitle: 'AI Healthcare Assistant', status: 'Completed', score: 85, files: ['presentation.pdf', 'demo.mp4'] },
-    { id: '2', name: 'Team Beta', presentationTitle: 'Smart City Solution', status: 'Completed', score: 92, files: ['slides.pdf', 'code.zip'] },
-  ],
-  '2': [
-    { id: '3', name: 'Team Gamma', presentationTitle: 'Blockchain Voting', status: 'In Progress', score: '-', files: ['draft.pdf'] },
-    { id: '4', name: 'Team Delta', presentationTitle: 'AR Navigation', status: 'Pending', score: '-', files: ['proposal.pdf'] },
-  ],
-  '3': [
-    { id: '5', name: 'Team Epsilon', presentationTitle: 'TBA', status: 'Not Started', score: '-', files: [] },
-    { id: '6', name: 'Team Zeta', presentationTitle: 'TBA', status: 'Not Started', score: '-', files: [] },
-  ],
-};
-
 interface HackathonDetailsProps {
   hackathonId: string;
   type: string;
@@ -44,9 +31,88 @@ interface HackathonDetailsProps {
 const HackathonDetails = ({ hackathonId, type }: HackathonDetailsProps) => {
   const [selectedTeam, setSelectedTeam] = React.useState<Team | null>(null);
   const navigate = useNavigate();
-  const teams = mockTeams[hackathonId] || [];
-  
   const showEvaluateButton = type.toLowerCase().includes('in progress');
+  
+  // Fetch real data from API
+  const teamSummaries = useTeamSummaries();
+  const teamEvaluations = useTeamEvaluations();
+  
+  // Debug data
+  console.log('Team Summaries:', teamSummaries.data);
+  console.log('Team Evaluations:', teamEvaluations.data);
+  
+  // Handle loading state
+  if (teamSummaries.isLoading || teamEvaluations.isLoading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <span className="ml-2">Loading team data...</span>
+      </div>
+    );
+  }
+
+  // Handle error state
+  if (teamSummaries.isError || teamEvaluations.isError) {
+    return (
+      <Alert variant="destructive" className="mb-6">
+        <AlertDescription>
+          Failed to load team data. Please try again later.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  // Check if data is available and in the expected format
+  console.log('Team Summaries type:', typeof teamSummaries.data, Array.isArray(teamSummaries.data));
+  
+  // Safe transformation of API data
+  let teams: Team[] = [];
+  
+  try {
+    // Handle case where data might not be an array
+    const summariesArray = Array.isArray(teamSummaries.data) 
+      ? teamSummaries.data 
+      : teamSummaries.data ? [teamSummaries.data] : [];
+      
+    teams = summariesArray.map(summary => {
+      const evaluation = Array.isArray(teamEvaluations.data) 
+        ? teamEvaluations.data.find(evalItem => evalItem.team_name === summary.team_name)
+        : null;
+      
+      return {
+        id: summary.id?.toString() || Math.random().toString(36).substring(7),
+        name: summary.team_name || 'Unknown Team',
+        presentationTitle: summary.team_name?.includes('Team') && summary.team_name.split('Team').length > 1 
+          ? summary.team_name.split('Team')[1].trim() + ' Project' 
+          : 'Project',
+        status: summary.status || 'pending',
+        score: evaluation?.total_score ?? '-',
+        files: ['project.pdf'] // Placeholder for files, would need a real API endpoint for this
+      };
+    });
+  } catch (error) {
+    console.error('Error transforming team data:', error);
+    // Fallback to empty array if transformation fails
+    teams = [];
+  }
+  
+  // For debugging
+  console.log('Transformed teams:', teams);
+
+  // Display message if no teams are available
+  if (teams.length === 0) {
+    return (
+      <div className="py-8 text-center">
+        <p className="text-gray-600">No team data available for this hackathon.</p>
+        <Button 
+          className="mt-4"
+          onClick={() => navigate('/dashboard')}
+        >
+          Return to Dashboard
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -58,24 +124,32 @@ const HackathonDetails = ({ hackathonId, type }: HackathonDetailsProps) => {
               <TableHead>Presentation Title</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Score</TableHead>
-              <TableHead>Files</TableHead>
+              <TableHead>Details</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {teams.map((team) => (
               <TableRow key={team.id}>
-                <TableCell>{team.name}</TableCell>
+                <TableCell className="font-medium">{team.name}</TableCell>
                 <TableCell>{team.presentationTitle}</TableCell>
-                <TableCell>{team.status}</TableCell>
+                <TableCell>
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                    team.status === 'success' ? 'bg-green-100 text-green-800' :
+                    team.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                    team.status === 'failed' ? 'bg-red-100 text-red-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {team.status.charAt(0).toUpperCase() + team.status.slice(1)}
+                  </span>
+                </TableCell>
                 <TableCell>{team.score}</TableCell>
                 <TableCell>
                   <Button
                     variant="ghost"
-                    size="icon"
+                    size="sm"
                     onClick={() => setSelectedTeam(team)}
-                    disabled={team.files.length === 0}
                   >
-                    <FileText className="h-4 w-4" />
+                    View
                   </Button>
                 </TableCell>
               </TableRow>
@@ -95,21 +169,70 @@ const HackathonDetails = ({ hackathonId, type }: HackathonDetailsProps) => {
           </Button>
         </div>
       )}
-
-      <Dialog open={!!selectedTeam} onOpenChange={() => setSelectedTeam(null)}>
-        <DialogContent>
+      
+      {/* Team details dialog */}
+      <Dialog open={!!selectedTeam} onOpenChange={(open) => !open && setSelectedTeam(null)}>
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>{selectedTeam?.name} - Files</DialogTitle>
-            <DialogDescription>Review submitted files</DialogDescription>
+            <DialogTitle>{selectedTeam?.name} - Details</DialogTitle>
+            <DialogDescription>Team information and project details</DialogDescription>
           </DialogHeader>
-          <ul className="space-y-2">
-            {selectedTeam?.files.map((file, index) => (
-              <li key={index} className="flex items-center space-x-2">
-                <FileText className="h-4 w-4" />
-                <span>{file}</span>
-              </li>
-            ))}
-          </ul>
+          
+          <div className="space-y-6 mt-4">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Project Summary</h3>
+              <p className="text-sm text-gray-700">
+                {teamSummaries.data?.find(s => s.team_name === selectedTeam?.name)?.summary || 
+                "No summary available for this team."}
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Evaluation Status</h3>
+              <div className="bg-gray-50 p-4 rounded-md">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Status</p>
+                    <p className="mt-1">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        selectedTeam?.status === 'success' ? 'bg-green-100 text-green-800' :
+                        selectedTeam?.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                        selectedTeam?.status === 'failed' ? 'bg-red-100 text-red-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {selectedTeam?.status ? 
+                          selectedTeam.status.charAt(0).toUpperCase() + selectedTeam.status.slice(1) : 
+                          'Pending'}
+                      </span>
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Score</p>
+                    <p className="mt-1 font-semibold">{selectedTeam?.score || 'Not evaluated'}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold">Actions</h3>
+              </div>
+              <div className="flex space-x-4">
+                <Button onClick={() => navigate(`/team/${selectedTeam?.name}`)}>
+                  View Full Details
+                </Button>
+                {showEvaluateButton && (
+                  <Button variant="outline" onClick={() => {
+                    setSelectedTeam(null);
+                    navigate('/judgement-criteria');
+                  }}>
+                    Evaluate
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
