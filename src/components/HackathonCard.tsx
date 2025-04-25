@@ -128,7 +128,18 @@ const TeamsDialog = ({ hackathonId, hackathonName }: { hackathonId: string, hack
         </TableBody>
       </Table>
       
-      <div className="mt-6 flex justify-end">
+      <div className="mt-6 flex justify-end space-x-3">
+        <Button 
+          className="bg-blue-600 hover:bg-blue-700 text-white" 
+          onClick={() => {
+            console.log('Navigating to leaderboard with hackathon ID:', hackathonId);
+            const numericHackathonId = parseInt(hackathonId);
+            navigate(`/leaderboard/${numericHackathonId}`);
+          }}
+        >
+          View Leaderboard
+        </Button>
+        
         <Button 
           className="bg-purple-600 hover:bg-purple-700 text-white" 
           onClick={() => {

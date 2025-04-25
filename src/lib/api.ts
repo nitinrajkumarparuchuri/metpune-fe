@@ -48,6 +48,8 @@ export interface Hackathon {
   status: 'active' | 'completed' | 'archived';
   created_at?: string;
   updated_at?: string;
+  team_count?: number;
+  submission_count?: number;
 }
 
 export interface Team {
@@ -125,12 +127,14 @@ export const apiService = {
   },
 
   createHackathon: async (hackathon: Omit<Hackathon, 'id'>): Promise<Hackathon> => {
-    const response = await api.post('/hackathons', hackathon);
+    // Wrap the hackathon data in a 'hackathon' key to match Rails' strong params
+    const response = await api.post('/hackathons', { hackathon });
     return response.data;
   },
 
   updateHackathon: async (id: number, hackathon: Partial<Hackathon>): Promise<Hackathon> => {
-    const response = await api.put(`/hackathons/${id}`, hackathon);
+    // Wrap the hackathon data in a 'hackathon' key to match Rails' strong params
+    const response = await api.put(`/hackathons/${id}`, { hackathon });
     return response.data;
   },
 

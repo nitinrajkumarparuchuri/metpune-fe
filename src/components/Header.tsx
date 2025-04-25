@@ -13,6 +13,7 @@ const Header = () => {
   // Navigation links
   const navLinks = [
     { path: '/', label: 'Home', icon: <Home className="h-4 w-4 mr-2" /> },
+    { path: '/hackathons', label: 'Hackathons', icon: <Award className="h-4 w-4 mr-2" /> },
     { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-4 w-4 mr-2" /> },
     { path: '/insights', label: 'Insights', icon: <LightbulbIcon className="h-4 w-4 mr-2" /> },
     { path: '/judgement-criteria', label: 'Judging', icon: <Award className="h-4 w-4 mr-2" /> },

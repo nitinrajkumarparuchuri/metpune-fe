@@ -8,18 +8,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams, useParams } from 'react-router-dom';
 import { BookOpen, BookText, RefreshCw, AlertCircle, ChevronLeft, PenTool } from 'lucide-react';
 import { parse } from 'marked';
+import { useHackathonContext } from '@/contexts/HackathonContext';
 
 const TeamBlogs = () => {
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
+  const { selectedHackathonId } = useHackathonContext();
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   
   // Fetch team blogs data
-  const teamBlogs = useTeamBlogs();
-  const teamBlog = useTeamBlog(selectedTeam || '');
-  const teamBlogMarkdown = useTeamBlogMarkdown(selectedTeam || '');
+  const teamBlogs = useTeamBlogs(selectedHackathonId);
+  const teamBlog = useTeamBlog(selectedTeam || '', selectedHackathonId);
+  const teamBlogMarkdown = useTeamBlogMarkdown(selectedTeam || '', selectedHackathonId);
   
   // Mutation for generating blogs
   const generateTeamBlog = useGenerateTeamBlog(queryClient);
@@ -31,7 +34,10 @@ const TeamBlogs = () => {
   const hasError = teamBlogs.isError;
   
   const handleGenerateBlog = (teamName: string) => {
-    generateTeamBlog.mutate(teamName);
+    generateTeamBlog.mutate({ 
+      teamName, 
+      hackathonId: selectedHackathonId 
+    });
   };
   
   return (
@@ -41,9 +47,12 @@ const TeamBlogs = () => {
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center space-x-2">
-              <Link to="/judgement-criteria" className="flex items-center text-purple-600 hover:text-purple-700">
+              <Link 
+                to={`/leaderboard${selectedHackathonId ? `/${selectedHackathonId}` : ''}`} 
+                className="flex items-center text-purple-600 hover:text-purple-700"
+              >
                 <ChevronLeft className="h-5 w-5" />
-                <span>Back to Judging</span>
+                <span>Back to Leaderboard</span>
               </Link>
             </div>
             <h1 className="text-2xl font-bold">Team Blogs</h1>
@@ -87,7 +96,9 @@ const TeamBlogs = () => {
                 Start evaluating teams to generate blogs for them
               </p>
               <Button asChild>
-                <Link to="/judgement-criteria">Go to Evaluation</Link>
+                <Link to={`/leaderboard${selectedHackathonId ? `/${selectedHackathonId}` : ''}`}>
+                  View Leaderboard
+                </Link>
               </Button>
             </div>
           ) : (

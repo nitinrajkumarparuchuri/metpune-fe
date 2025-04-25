@@ -5,8 +5,9 @@ import { Plus, X, ArrowRight, Loader } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useHackathons } from '@/hooks/use-data';
+import { useHackathons, useTeamSummaries, useGenerateTeamBlog } from '@/hooks/use-data';
 import { useHackathonContext } from '@/contexts/HackathonContext';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface FilterWithWeightage {
   name: string;
@@ -16,20 +17,83 @@ interface FilterWithWeightage {
 const JudgementCriteria = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   
   // Use the hackathon context to get the current hackathon
   const { selectedHackathonId, selectedHackathon } = useHackathonContext();
+  
+  // Get team summaries to check which teams have summaries
+  const { data: teamSummaries } = useTeamSummaries(selectedHackathonId);
+  const generateTeamBlog = useGenerateTeamBlog(queryClient);
   
   const [filters, setFilters] = useState<FilterWithWeightage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<{leaderboard?: any[], error?: string}>(null);
   const [transitionState, setTransitionState] = useState<'idle' | 'loading' | 'results' | 'transition'>('idle');
+  const [selectedTeam, setSelectedTeam] = useState<any>(null);
+  const [blogGeneration, setBlogGeneration] = useState<{started: boolean, completed: Set<string>}>({
+    started: false,
+    completed: new Set()
+  });
+  
+  // Helper function to generate blogs for teams
+  const generateBlogsForTeams = async (teamNames: string[]) => {
+    for (const teamName of teamNames) {
+      try {
+        // Skip if we've already completed this one in this session
+        if (blogGeneration.completed.has(teamName)) {
+          console.log(`Skipping blog generation for ${teamName} - already done`);
+          continue;
+        }
+        
+        console.log(`Generating blog for team: ${teamName}`);
+        await generateTeamBlog.mutateAsync({ 
+          teamName, 
+          hackathonId: selectedHackathonId 
+        });
+        
+        // Mark as completed
+        setBlogGeneration(prev => ({
+          ...prev, 
+          completed: new Set([...prev.completed, teamName])
+        }));
+        
+        // Short delay to avoid overloading the server
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } catch (error) {
+        console.error(`Error generating blog for ${teamName}:`, error);
+      }
+    }
+    console.log('Finished generating requested team blogs');
+  };
   
   console.log('Current hackathon context:', { 
     selectedHackathonId, 
     selectedHackathon: selectedHackathon?.name
   });
+
+  // Auto-generate team blogs when the component loads and teamSummaries are available
+  useEffect(() => {
+    // Only run if we haven't started blog generation yet and we have team summaries
+    if (!blogGeneration.started && teamSummaries && teamSummaries.length > 0 && selectedHackathonId) {
+      console.log('Starting automatic team blog generation for teams with summaries');
+      setBlogGeneration(prev => ({ ...prev, started: true }));
+      
+      // For each team with a successful summary, trigger blog generation
+      const successfulTeams = teamSummaries.filter(summary => summary.status === 'success');
+      
+      if (successfulTeams.length > 0) {
+        console.log(`Found ${successfulTeams.length} teams with successful summaries, generating blogs`);
+        
+        // Generate blogs using our helper function
+        const teamNames = successfulTeams.map(summary => summary.team_name);
+        generateBlogsForTeams(teamNames);
+      } else {
+        console.log('No teams with successful summaries found, skipping blog generation');
+      }
+    }
+  }, [teamSummaries, selectedHackathonId, blogGeneration.started]);
 
   const suggestedFilters = [
     'AI through out the SDLC',
@@ -355,6 +419,14 @@ const JudgementCriteria = () => {
               // Set the results
               setResults(finalResultData);
               
+              // If we have leaderboard data, try to generate blogs for these teams too
+              if (finalResultData && finalResultData.leaderboard && finalResultData.leaderboard.length > 0) {
+                console.log('Generating blogs for newly evaluated teams');
+                const teamNames = finalResultData.leaderboard.map(team => team.team_name);
+                // Generate blogs in the background - don't wait for completion
+                generateBlogsForTeams(teamNames);
+              }
+              
               // Wait briefly to ensure dialog transition works correctly
               setTimeout(() => {
                 setTransitionState('results');
@@ -662,6 +734,7 @@ const JudgementCriteria = () => {
             // When results dialog is closed, reset everything
             setResults(null);
             setTransitionState('idle');
+            setSelectedTeam(null);
           }
         }}
       >
@@ -678,58 +751,43 @@ const JudgementCriteria = () => {
           
           {results?.leaderboard && results.leaderboard.length > 0 ? (
             <div className="space-y-6">
-              {/* Top three teams with medals */}
+              {/* Top three teams with medals - Larger display */}
               <div className="flex justify-evenly items-end">
                 {results.leaderboard.slice(0, 3).map((team, index) => {
                   const position = index + 1;
-                  const height = position === 1 ? 'h-32' : position === 2 ? 'h-24' : 'h-20';
+                  const height = position === 1 ? 'h-40' : position === 2 ? 'h-32' : 'h-28';
                   const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : '🥉';
                   
                   return (
                     <div key={team.team_name} className="flex flex-col items-center">
-                      <div className="text-3xl mb-2">{medal}</div>
-                      <div className={`${height} w-24 bg-purple-600 rounded-t-lg flex items-center justify-center`}>
-                        <span className="text-white font-bold">{team.total_score}</span>
+                      <div className="text-4xl mb-3">{medal}</div>
+                      <div className={`${height} w-28 bg-purple-600 rounded-t-lg flex items-center justify-center`}>
+                        <span className="text-white text-xl font-bold">{team.total_score}</span>
                       </div>
-                      <div className="bg-purple-100 w-24 p-2 text-center rounded-b-lg">
-                        <div className="font-medium truncate">{team.team_name}</div>
+                      <div className="bg-purple-100 w-28 p-3 text-center rounded-b-lg">
+                        <div className="font-medium">{team.team_name}</div>
                       </div>
+                      <button 
+                        onClick={() => setSelectedTeam(team)}
+                        className="mt-3 text-sm bg-purple-100 hover:bg-purple-200 text-purple-800 font-semibold py-1 px-3 rounded"
+                      >
+                        View Details
+                      </button>
                     </div>
                   );
                 })}
               </div>
               
-              {/* Full list */}
-              <div className="mt-6">
-                <h3 className="font-semibold mb-2">Complete Rankings</h3>
-                <div className="bg-gray-50 rounded-lg p-4 max-h-60 overflow-auto">
-                  <table className="w-full">
-                    <thead className="text-xs text-gray-700 uppercase bg-gray-100">
-                      <tr>
-                        <th className="px-3 py-2 text-left">Rank</th>
-                        <th className="px-3 py-2 text-left">Team</th>
-                        <th className="px-3 py-2 text-right">Score</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {results.leaderboard.map((team) => (
-                        <tr key={team.team_name} className="hover:bg-gray-100">
-                          <td className="px-3 py-2 text-left">{team.rank}</td>
-                          <td className="px-3 py-2 text-left font-medium">{team.team_name}</td>
-                          <td className="px-3 py-2 text-right">{team.total_score}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-              
               <div className="flex justify-between mt-4">
                 <Button
-                  onClick={handleViewBlogs}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={() => {
+                    // Navigate to leaderboard page with criteria signature
+                    const criteriaSignature = filters.map(f => `${f.name}:${f.weightage}`).sort().join('|');
+                    navigate(`/leaderboard${selectedHackathonId ? `/${selectedHackathonId}` : ''}?criteria_signature=${encodeURIComponent(criteriaSignature)}`);
+                  }}
+                  className="bg-green-600 hover:bg-green-700 text-white"
                 >
-                  View Team Blogs
+                  View Full Leaderboard
                 </Button>
                 <Button
                   onClick={() => setResults(null)}
@@ -745,6 +803,60 @@ const JudgementCriteria = () => {
               <Button 
                 onClick={() => setResults(null)} 
                 className="mt-4"
+              >
+                Close
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+      
+      {/* Team Evaluation Details Dialog */}
+      <Dialog 
+        open={selectedTeam !== null} 
+        onOpenChange={(open) => {
+          if (!open) setSelectedTeam(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogTitle className="text-xl font-bold text-center mb-4">
+            {selectedTeam?.team_name} Evaluation
+          </DialogTitle>
+          
+          {selectedTeam && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center bg-purple-50 p-3 rounded-lg">
+                <span className="font-semibold">Overall Score:</span>
+                <span className="text-xl font-bold text-purple-700">{selectedTeam.total_score}</span>
+              </div>
+              
+              <div>
+                <h3 className="font-semibold mb-2">Individual Criteria Scores:</h3>
+                <div className="space-y-3">
+                  {selectedTeam.scores && Object.entries(selectedTeam.scores).map(([criterion, data]: [string, any]) => (
+                    <div key={criterion} className="bg-gray-50 p-3 rounded-lg">
+                      <div className="flex justify-between mb-1">
+                        <span className="font-medium">{criterion}</span>
+                        <div className="flex items-center">
+                          <span className="text-sm text-gray-500 mr-2">Weight: {Math.round(data.weight * 100)}%</span>
+                          <span className="font-semibold">{data.score}/5.0</span>
+                        </div>
+                      </div>
+                      <div className="relative h-2 bg-gray-200 rounded-full">
+                        <div 
+                          className="absolute h-2 bg-purple-500 rounded-full" 
+                          style={{ width: `${(data.score / 5) * 100}%` }}
+                        />
+                      </div>
+                      <p className="text-sm mt-2 text-gray-700">{data.feedback}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <Button
+                onClick={() => setSelectedTeam(null)}
+                className="w-full mt-4 bg-purple-600 hover:bg-purple-700 text-white"
               >
                 Close
               </Button>

@@ -6,7 +6,7 @@ import AnalyticsSection from '@/components/dashboard/AnalyticsSection';
 import HackathonSection from '@/components/dashboard/HackathonSection';
 import HackathonSelector from '@/components/HackathonSelector';
 import GenerateDataPanel from '@/components/GenerateDataPanel';
-import { useTeamSummaries, useTeamEvaluations, useHackathonInsights, useHackathons } from '@/hooks/use-data';
+import { useTeamSummaries, useTeamEvaluations, useHackathonInsights, useHackathons, useSubmissions } from '@/hooks/use-data';
 import { useHackathonContext } from '@/contexts/HackathonContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -82,13 +82,15 @@ const Dashboard = () => {
   const teamEvaluations = useTeamEvaluations(selectedHackathonId);
   const hackathonInsights = useHackathonInsights(selectedHackathonId);
   const { data: hackathons, isLoading: isHackathonsLoading } = useHackathons();
+  const { data: submissions, isLoading: isSubmissionsLoading } = useSubmissions(selectedHackathonId);
   
   // Loading state
   const isLoading = 
     teamSummaries.isLoading || 
     teamEvaluations.isLoading || 
     hackathonInsights.isLoading ||
-    isHackathonsLoading;
+    isHackathonsLoading ||
+    isSubmissionsLoading;
   
   // Error state
   const hasError = 
@@ -103,6 +105,18 @@ const Dashboard = () => {
   // Find the currently selected hackathon
   const currentHackathon = hackathons?.find(h => h.id === selectedHackathonId);
   
+  // Calculate team count from either team summaries or submissions
+  const getTeamCount = () => {
+    if (teamSummaries.data?.length) {
+      return teamSummaries.data.length;
+    } else if (submissions && Array.isArray(submissions)) {
+      // Count unique team names from submissions
+      const uniqueTeamNames = new Set(submissions.map(s => s.team_name));
+      return uniqueTeamNames.size;
+    }
+    return 0;
+  };
+  
   // Update hackathon structure with real data
   const enhancedHackathon = currentHackathon ? {
     id: currentHackathon.id.toString(),
@@ -110,7 +124,7 @@ const Dashboard = () => {
     date: currentHackathon.start_date && currentHackathon.end_date
       ? `${new Date(currentHackathon.start_date).toLocaleDateString()} - ${new Date(currentHackathon.end_date).toLocaleDateString()}`
       : 'Dates TBD',
-    teams: teamSummaries.data?.length || 0,
+    teams: getTeamCount(),
     presentations: teamSummaries.data?.length || 0,
     insights: hackathonInsights.data?.length || 0,
     status: currentHackathon.status,
@@ -137,14 +151,14 @@ const Dashboard = () => {
 
           {/* Analytics Section - Pass real stats */}
           <AnalyticsSection 
-            teamCount={teamSummaries.data?.length || 0}
+            teamCount={getTeamCount()}
             evaluationCount={
               Array.isArray(teamEvaluations.data) 
                 ? teamEvaluations.data.length 
                 : 0
             }
             insightCount={hackathonInsights.data?.length || 0}
-            isLoading={isLoading}
+            isLoading={isLoading || isSubmissionsLoading}
           />
 
           {/* Hackathon Selector and Generate Data Panel */}

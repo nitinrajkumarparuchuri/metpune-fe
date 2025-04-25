@@ -12,13 +12,14 @@ import {
   DialogFooter,
   DialogDescription
 } from '@/components/ui/dialog';
+import { Progress } from '@/components/ui/progress';
 import { Label } from '@/components/ui/label';
 import Header from '@/components/Header';
 import apiService from '@/lib/api';
 import { useHackathonContext } from '@/contexts/HackathonContext';
 import axios from 'axios';
 
-const Index = () => {
+const Hackathons = () => {
   const navigate = useNavigate();
   const { selectedHackathonId, setSelectedHackathonId } = useHackathonContext();
   
@@ -31,6 +32,11 @@ const Index = () => {
   const [hackathons, setHackathons] = useState([]);
   const [isLoadingHackathons, setIsLoadingHackathons] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Ingestion progress dialog states
+  const [isIngestionDialogOpen, setIsIngestionDialogOpen] = useState(false);
+  const [ingestionProgress, setIngestionProgress] = useState(0);
+  const [ingestionStatusText, setIngestionStatusText] = useState('Starting ingestion...');
   
   // New hackathon modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -127,8 +133,16 @@ const Index = () => {
   const handleIngestData = async () => {
     setIsIngesting(true);
     setError(null);
+    
+    // Reset and show ingestion dialog
+    setIngestionProgress(0);
+    setIngestionStatusText('Starting document ingestion...');
+    setIsIngestionDialogOpen(true);
+    
     try {
       await apiService.startIngestion(selectedHackathonId);
+      setIngestionStatusText('Checking for documents in Google Drive...');
+      setIngestionProgress(10);
       
       // Poll for completion
       let attempts = 0;
@@ -138,6 +152,17 @@ const Index = () => {
       const checkInterval = setInterval(async () => {
         attempts++;
         try {
+          // Update progress based on attempts (10-90%)
+          const baseProgress = 10; // Start at 10%
+          const progressPerAttempt = 80 / maxAttempts; // Distribute 80% across all attempts
+          const newProgress = baseProgress + (progressPerAttempt * attempts);
+          setIngestionProgress(Math.min(newProgress, 90)); // Cap at 90% until complete
+          
+          // Update status text periodically
+          if (attempts === 3) setIngestionStatusText('Extracting text from documents...');
+          if (attempts === 8) setIngestionStatusText('Processing team submissions...');
+          if (attempts === 15) setIngestionStatusText('Analyzing document content...');
+          
           const submissions = await apiService.getSubmissions(selectedHackathonId);
           
           // Check if we have any successful submissions
@@ -151,25 +176,47 @@ const Index = () => {
           // If we have at least one successful submission, we can proceed
           if (successfulSubmissions) {
             clearInterval(checkInterval);
-            setIsIngestionComplete(true);
-            setIsIngesting(false);
+            setIngestionProgress(100);
+            setIngestionStatusText('Documents ingested successfully!');
+            
+            // Close the dialog after a short delay
+            setTimeout(() => {
+              setIsIngestionDialogOpen(false);
+              setIsIngestionComplete(true);
+              setIsIngesting(false);
+            }, 1500);
+            
             // After successful ingestion, check for teams to generate summaries
             handleAutoGenerateSummaries();
           } 
           // If we have processing submissions but reached max attempts, allow user to proceed
           else if (processingSubmissions && attempts >= maxAttempts) {
             clearInterval(checkInterval);
-            setIsIngestionComplete(true);
-            setIsIngesting(false);
-            setError('Ingestion is taking longer than expected but is still processing. You can proceed to the dashboard to monitor progress.');
-            setHasTeamData(false);
+            setIngestionProgress(95);
+            setIngestionStatusText('Ingestion is taking longer than expected but is still processing.');
+            
+            // Close the dialog after a short delay
+            setTimeout(() => {
+              setIsIngestionDialogOpen(false);
+              setIsIngestionComplete(true);
+              setIsIngesting(false);
+              setError('Ingestion is taking longer than expected but is still processing. You can proceed to the dashboard to monitor progress.');
+              setHasTeamData(false);
+            }, 2000);
           }
           // If max attempts reached with no success or processing, consider it failed
           else if (attempts >= maxAttempts) {
             clearInterval(checkInterval);
-            setIsIngesting(false);
-            setIsIngestionComplete(false);
-            setError('No documents found in Google Drive. Please check the folder structure in Google Drive and ensure documents are available before starting ingestion.');
+            setIngestionProgress(100);
+            setIngestionStatusText('No documents found in Google Drive.');
+            
+            // Close the dialog after a short delay
+            setTimeout(() => {
+              setIsIngestionDialogOpen(false);
+              setIsIngesting(false);
+              setIsIngestionComplete(false);
+              setError('No documents found in Google Drive. Please check the folder structure in Google Drive and ensure documents are available before starting ingestion.');
+            }, 2000);
           }
         } catch (error) {
           console.error('Error checking ingestion status:', error);
@@ -177,28 +224,44 @@ const Index = () => {
           // If we've had too many errors, stop polling
           if (attempts >= maxAttempts) {
             clearInterval(checkInterval);
-            setIsIngesting(false);
-            setError('Error checking ingestion status. Please try again later.');
+            setIngestionProgress(100);
+            setIngestionStatusText('Error checking ingestion status.');
+            
+            // Close the dialog after a short delay
+            setTimeout(() => {
+              setIsIngestionDialogOpen(false);
+              setIsIngesting(false);
+              setError('Error checking ingestion status. Please try again later.');
+            }, 2000);
           }
         }
       }, pollInterval);
     } catch (error) {
       console.error('Error starting ingestion:', error);
-      setIsIngesting(false);
+      
+      // Update dialog with error
+      setIngestionProgress(100);
+      setIngestionStatusText('Error starting ingestion.');
       
       // Error handling
+      let errorMessage = 'Failed to start data ingestion. Please try again.';
+      
       if (axios.isAxiosError(error)) {
         if (error.response) {
-          const errorMessage = error.response.data?.error || error.response.data?.message || 'Server error';
-          setError(`Error: ${errorMessage}`);
+          errorMessage = `Error: ${error.response.data?.error || error.response.data?.message || 'Server error'}`;
         } else if (error.request) {
-          setError('No response from server. The server might be down or the request timed out.');
+          errorMessage = 'No response from server. The server might be down or the request timed out.';
         } else {
-          setError(`Failed to start data ingestion: ${error.message}`);
+          errorMessage = `Failed to start data ingestion: ${error.message}`;
         }
-      } else {
-        setError('Failed to start data ingestion. Please try again.');
       }
+      
+      // Close the dialog after a short delay and show the error
+      setTimeout(() => {
+        setIsIngestionDialogOpen(false);
+        setIsIngesting(false);
+        setError(errorMessage);
+      }, 2000);
     }
   };
 
@@ -307,7 +370,7 @@ const Index = () => {
       <Header />
       <main className="flex-1 container mx-auto px-4 pt-20 pb-8">
         <div className="max-w-lg mx-auto">
-          <h1 className="text-2xl font-bold mb-6">Hackathon Evaluation System</h1>
+          <h1 className="text-2xl font-bold mb-6">Manage Hackathons</h1>
           
           {/* Hackathon Selection */}
           <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
@@ -560,8 +623,40 @@ const Index = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {/* Ingestion Progress Dialog */}
+      <Dialog open={isIngestionDialogOpen} onOpenChange={(open) => {
+        // Only allow closing the dialog programmatically, not by user interaction
+        if (!open && isIngesting) return;
+        setIsIngestionDialogOpen(open);
+      }}>
+        <DialogContent className="sm:max-w-md" hideClose={true}>
+          <DialogHeader>
+            <DialogTitle>Ingesting Documents</DialogTitle>
+            <DialogDescription>
+              Processing team documents from Google Drive
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-6">
+            <div className="mb-4 text-center">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-purple-600" />
+              <p className="text-lg font-medium text-gray-700">{ingestionStatusText}</p>
+              <p className="text-sm text-gray-500 mt-1">This may take a few minutes depending on the number of documents.</p>
+            </div>
+            
+            <div className="space-y-2">
+              <Progress value={ingestionProgress} className="h-2" />
+              <div className="flex justify-between text-xs text-gray-500">
+                <span>Ingestion Progress</span>
+                <span>{Math.round(ingestionProgress)}%</span>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
-export default Index;
+export default Hackathons;

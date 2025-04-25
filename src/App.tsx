@@ -4,12 +4,14 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HackathonProvider } from "./contexts/HackathonContext";
-import Index from "./pages/Index";
+import Home from "./pages/Home";
+import Hackathons from "./pages/Hackathons";
 import Dashboard from "./pages/Dashboard";
 import JudgementCriteria from "./pages/JudgementCriteria";
 import TeamDetails from "./pages/TeamDetails";
 import HackathonInsights from "./pages/HackathonInsights";
 import TeamBlogs from "./pages/TeamBlogs";
+import Leaderboard from "./pages/Leaderboard";
 import NotFound from "./pages/NotFound";
 
 // Create a new query client
@@ -47,7 +49,8 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
+            <Route path="/" element={<Home />} />
+            <Route path="/hackathons" element={<Hackathons />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/team/:teamName" element={<TeamDetails />} />
             <Route path="/team/:teamName/:hackathonId" element={<TeamDetails />} />
@@ -57,6 +60,8 @@ const App = () => (
             <Route path="/judgement-criteria/:hackathonId" element={<JudgementCriteria />} />
             <Route path="/team-blogs" element={<TeamBlogs />} />
             <Route path="/team-blogs/:hackathonId" element={<TeamBlogs />} />
+            <Route path="/leaderboard" element={<Leaderboard />} />
+            <Route path="/leaderboard/:hackathonId" element={<Leaderboard />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
