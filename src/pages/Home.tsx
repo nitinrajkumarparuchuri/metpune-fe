@@ -1,10 +1,17 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { FileText, Award, BarChart, ArrowRight } from 'lucide-react';
+import { FileText, Award, BarChart } from 'lucide-react';
 import Header from '@/components/Header';
 
 const Home = () => {
+  const navigate = useNavigate();
+
+  const handleGetStarted = () => {
+    sessionStorage.setItem('loginRedirect', '/hackathons');
+    navigate('/login');
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Header />
@@ -19,19 +26,14 @@ const Home = () => {
               Streamline your hackathon evaluations with AI-powered analysis, summaries, and insights.
             </p>
             
-            <div className="flex flex-wrap gap-4 justify-center">
-              <Link to="/index">
-                <Button size="lg" className="bg-purple-600 hover:bg-purple-700">
-                  <ArrowRight className="mr-2 h-5 w-5" />
-                  Enter Dashboard
-                </Button>
-              </Link>
-              <Link to="/hackathons">
-                <Button size="lg" variant="outline">
-                  <FileText className="mr-2 h-5 w-5" />
-                  Manage Hackathons
-                </Button>
-              </Link>
+            <div className="flex justify-center">
+              <Button 
+                size="lg" 
+                className="bg-purple-600 hover:bg-purple-700"
+                onClick={handleGetStarted}
+              >
+                Get Started
+              </Button>
             </div>
           </div>
           
@@ -66,15 +68,6 @@ const Home = () => {
                 Generate hackathon-wide insights and identify trends across team projects.
               </p>
             </div>
-          </div>
-          
-          {/* Call to Action */}
-          <div className="text-center py-8">
-            <Link to="/index">
-              <Button size="lg" className="bg-purple-600 hover:bg-purple-700">
-                Get Started
-              </Button>
-            </Link>
           </div>
         </div>
       </main>
