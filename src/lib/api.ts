@@ -3,12 +3,12 @@ import axios from 'axios';
 // Configure axios instance
 const api = axios.create({
   baseURL: process.env.NODE_ENV === 'production' 
-    ? 'https://your-production-api-url.com/api'
-    : '/api', // Using relative path for API to work with Vite proxy
+    ? 'https://web-production-a5e48.up.railway.app/api'
+    : 'http://localhost:3000/api', // Point directly to the backend in development
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 120000, // 120 second (2 minute) timeout for long operations
+  timeout: 300000, // 300 second (5 minute) timeout for long operations
 });
 
 // Add request interceptor for debugging
