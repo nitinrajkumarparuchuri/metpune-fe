@@ -259,11 +259,33 @@ export const apiService = {
   },
 
   getHackathonInsightsMarkdown: async (hackathonId?: number): Promise<string> => {
-    const url = hackathonId
-      ? `/hackathons/${hackathonId}/hackathon_insights/markdown`
-      : '/hackathon_insights/markdown';
-    const response = await api.get(url);
-    return response.data.markdown_content;
+    try {
+      const url = hackathonId
+        ? `/hackathons/${hackathonId}/hackathon_insights/markdown`
+        : '/hackathon_insights/markdown';
+      const response = await api.get(url);
+      
+      // Check if the response is a string (markdown content)
+      if (typeof response.data === 'string') {
+        return response.data;
+      }
+      
+      // Check if it's JSON content directly
+      if (typeof response.data === 'object' && response.data !== null) {
+        return JSON.stringify(response.data);
+      }
+      
+      // Check if it has a markdown_content field
+      if (response.data && response.data.markdown_content) {
+        return response.data.markdown_content;
+      }
+      
+      // Return empty string if none of the above
+      return '';
+    } catch (error) {
+      console.error('Error fetching hackathon insights markdown:', error);
+      return '';
+    }
   },
 
   generateHackathonInsights: async (hackathonId?: number): Promise<{ job_id: string }> => {
@@ -286,7 +308,8 @@ export const apiService = {
     hackathonId?: number
   ): Promise<JudgingCriterion> => {
     const url = hackathonId ? `/hackathons/${hackathonId}/judging_criteria` : '/judging_criteria';
-    const response = await api.post(url, criterion);
+    // Wrap the criterion data in a 'judging_criterion' key to match Rails' strong params
+    const response = await api.post(url, { judging_criterion: criterion });
     return response.data;
   },
 
@@ -298,7 +321,8 @@ export const apiService = {
     const url = hackathonId
       ? `/hackathons/${hackathonId}/judging_criteria/${id}`
       : `/judging_criteria/${id}`;
-    const response = await api.put(url, criterion);
+    // Wrap the criterion data in a 'judging_criterion' key to match Rails' strong params
+    const response = await api.put(url, { judging_criterion: criterion });
     return response.data;
   },
 

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { FileText, Award, BarChart } from 'lucide-react';
+import { FileText, Award, BarChart, ArrowRight } from 'lucide-react';
 import Header from '@/components/Header';
 
 const Home = () => {
@@ -20,16 +20,16 @@ const Home = () => {
             </p>
             
             <div className="flex flex-wrap gap-4 justify-center">
-              <Link to="/hackathons">
+              <Link to="/index">
                 <Button size="lg" className="bg-purple-600 hover:bg-purple-700">
-                  <FileText className="mr-2 h-5 w-5" />
-                  Manage Hackathons
+                  <ArrowRight className="mr-2 h-5 w-5" />
+                  Enter Dashboard
                 </Button>
               </Link>
-              <Link to="/dashboard">
+              <Link to="/hackathons">
                 <Button size="lg" variant="outline">
-                  <BarChart className="mr-2 h-5 w-5" />
-                  Dashboard
+                  <FileText className="mr-2 h-5 w-5" />
+                  Manage Hackathons
                 </Button>
               </Link>
             </div>
@@ -70,7 +70,7 @@ const Home = () => {
           
           {/* Call to Action */}
           <div className="text-center py-8">
-            <Link to="/hackathons">
+            <Link to="/index">
               <Button size="lg" className="bg-purple-600 hover:bg-purple-700">
                 Get Started
               </Button>
@@ -78,6 +78,13 @@ const Home = () => {
           </div>
         </div>
       </main>
+      
+      {/* Footer */}
+      <footer className="py-6 bg-gray-50 border-t border-gray-200">
+        <div className="container mx-auto px-4 text-center text-sm text-gray-500">
+          <p>Hackathon AI Evaluation System &copy; {new Date().getFullYear()}</p>
+        </div>
+      </footer>
     </div>
   );
 };

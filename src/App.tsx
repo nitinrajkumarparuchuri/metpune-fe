@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HackathonProvider } from "./contexts/HackathonContext";
 import Home from "./pages/Home";
+import Index from "./pages/Index";
 import Hackathons from "./pages/Hackathons";
 import Dashboard from "./pages/Dashboard";
 import JudgementCriteria from "./pages/JudgementCriteria";
@@ -50,6 +51,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/index" element={<Index />} />
             <Route path="/hackathons" element={<Hackathons />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/team/:teamName" element={<TeamDetails />} />

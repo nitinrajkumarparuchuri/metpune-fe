@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Plus, X, ArrowRight, Loader } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { useHackathons, useTeamSummaries, useGenerateTeamBlog } from '@/hooks/use-data';
 import { useHackathonContext } from '@/contexts/HackathonContext';
 import { useQueryClient } from '@tanstack/react-query';
+import Header from '@/components/Header';
 
 interface FilterWithWeightage {
   name: string;
@@ -18,9 +19,20 @@ const JudgementCriteria = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const params = useParams();
   
   // Use the hackathon context to get the current hackathon
-  const { selectedHackathonId, selectedHackathon } = useHackathonContext();
+  const { selectedHackathonId, selectedHackathon, setSelectedHackathonId } = useHackathonContext();
+  
+  // If we have a hackathon ID in the URL, use it
+  useEffect(() => {
+    if (params.hackathonId && !isNaN(Number(params.hackathonId))) {
+      const hackathonId = Number(params.hackathonId);
+      if (hackathonId !== selectedHackathonId) {
+        setSelectedHackathonId(hackathonId);
+      }
+    }
+  }, [params.hackathonId, selectedHackathonId, setSelectedHackathonId]);
   
   // Get team summaries to check which teams have summaries
   const { data: teamSummaries } = useTeamSummaries(selectedHackathonId);
@@ -36,6 +48,19 @@ const JudgementCriteria = () => {
     started: false,
     completed: new Set()
   });
+  
+  // Initialize with default criteria if empty
+  useEffect(() => {
+    if (filters.length === 0) {
+      setFilters([
+        { name: 'Innovation', weightage: 20 },
+        { name: 'Technical Implementation', weightage: 20 },
+        { name: 'User Experience', weightage: 20 },
+        { name: 'Business Potential', weightage: 20 },
+        { name: 'Presentation Quality', weightage: 20 }
+      ]);
+    }
+  }, [filters.length]);
   
   // Helper function to generate blogs for teams
   const generateBlogsForTeams = async (teamNames: string[]) => {
@@ -589,281 +614,306 @@ const JudgementCriteria = () => {
   const handleViewBlogs = () => {
     // Pass the hackathon ID to the team blogs page if available
     if (selectedHackathonId) {
-      navigate(`/team-blogs?hackathonId=${selectedHackathonId}`);
+      navigate(`/team-blogs/${selectedHackathonId}`);
     } else {
       navigate('/team-blogs');
     }
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-2">Judgement Criteria</h1>
-      {selectedHackathon && (
-        <p className="text-purple-600 font-medium mb-6">
-          Evaluating: {selectedHackathon.name}
-        </p>
-      )}
-      
-      {/* Filter input with add button */}
-      <div className="flex gap-2 mb-6">
-        <div className="flex-1 relative">
-          <Input
-            type="text"
-            placeholder="Add custom filter criteria..."
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyPress={handleKeyPress}
-            className="w-full pr-10"
-          />
-        </div>
-        <Button 
-          onClick={() => addFilter(inputValue)}
-          variant="outline"
-          size="icon"
-        >
-          <Plus className="h-4 w-4" />
-        </Button>
-      </div>
-
-      {/* Selected filters with weightage */}
-      {filters.length > 0 && (
-        <div className="mb-6">
-          <h2 className="text-sm text-gray-600 mb-2">Selected Filters:</h2>
-          <div className="flex flex-col gap-2">
-            {filters.map((filter, index) => (
-              <div
-                key={index}
-                className="flex items-center gap-3 bg-purple-100 text-purple-700 px-4 py-2 rounded-lg"
-              >
-                <span className="flex-1">{filter.name}</span>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    value={filter.weightage}
-                    onChange={(e) => updateWeightage(filter.name, e.target.value)}
-                    className="w-20 h-8 text-sm"
-                    min="0"
-                    max="100"
-                  />
-                  <span className="text-sm">%</span>
-                  <button
-                    onClick={() => removeFilter(filter.name)}
-                    className="hover:text-purple-900 ml-2"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
+    <div className="min-h-screen flex flex-col bg-gray-50">
+      <Header />
+      <main className="flex-1 container mx-auto px-4 pt-20 pb-12">
+        <div className="max-w-3xl mx-auto bg-white p-6 rounded-lg shadow-sm">
+          <h1 className="text-2xl font-bold mb-2">Judgement Criteria</h1>
+          {selectedHackathon && (
+            <p className="text-purple-600 font-medium mb-6">
+              Evaluating: {selectedHackathon.name}
+            </p>
+          )}
+          
+          {/* Explanation */}
+          <div className="bg-blue-50 p-4 rounded-md mb-6">
+            <h2 className="text-lg font-medium text-blue-700 mb-2">Setup Evaluation Criteria</h2>
+            <p className="text-blue-600 mb-3">Define the criteria used to judge and rank all hackathon teams. Total weightage must equal 100%.</p>
+            <p className="text-sm text-blue-500">The AI will evaluate each team according to these criteria and generate weighted scores.</p>
           </div>
-        </div>
-      )}
-
-      {/* Suggested filters */}
-      <div>
-        <h2 className="text-sm text-gray-600 mb-2">Suggested Filters:</h2>
-        <div className="flex flex-wrap gap-2">
-          {suggestedFilters.map((filter, index) => (
-            <button
-              key={index}
-              onClick={() => addFilter(filter)}
-              className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-full transition-colors"
-              disabled={filters.some(f => f.name === filter)}
-            >
-              {filter}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Proceed button - Made more prominent */}
-      {filters.length > 0 && (
-        <div className="mt-8 flex justify-center">
-          <Button 
-            onClick={handleProceed} 
-            className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white"
-          >
-            Proceed to Judge
-            <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
-        </div>
-      )}
-
-      {/* 
-        Loading Dialog - Only shown during loading or transition states 
-        Stays visible while transitioning to results
-      */}
-      <Dialog 
-        open={transitionState === 'loading' || transitionState === 'transition'}
-        onOpenChange={(open) => {
-          if (!open && transitionState !== 'results') {
-            setIsLoading(false);
-            setTransitionState('idle');
-          }
-        }}
-      >
-        <DialogContent className="sm:max-w-md flex flex-col items-center justify-center p-6 bg-white rounded-lg">
-          <DialogTitle className="sr-only">Loading</DialogTitle>
-          <div className="flex flex-col items-center space-y-4 py-6">
-            <div className="relative h-24 w-24">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Loader className="h-10 w-10 text-purple-600 animate-spin" />
-              </div>
-              <Progress 
-                className="h-4 w-full absolute bottom-0 bg-purple-100" 
-                value={transitionState === 'transition' ? 100 : 66} 
+          
+          {/* Filter input with add button */}
+          <div className="flex gap-2 mb-6">
+            <div className="flex-1 relative">
+              <Input
+                type="text"
+                placeholder="Add custom filter criteria..."
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyPress={handleKeyPress}
+                className="w-full pr-10"
               />
             </div>
-            <p className="text-center text-lg font-medium mt-4">
-              {transitionState === 'transition' ? 'Preparing Results...' : 'Evaluating Teams...'}
-            </p>
-            <p className="text-center text-gray-500">
-              {transitionState === 'transition' 
-                ? 'Almost there! Finalizing the leaderboard...'
-                : 'Our AI is carefully reviewing each team\'s submission.'}
-            </p>
+            <Button 
+              onClick={() => addFilter(inputValue)}
+              variant="outline"
+              size="icon"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
           </div>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Results Dialog - Only shown in results state */}
-      <Dialog 
-        open={transitionState === 'results' && results !== null} 
-        onOpenChange={(open) => {
-          if (!open) {
-            // When results dialog is closed, reset everything
-            setResults(null);
-            setTransitionState('idle');
-            setSelectedTeam(null);
-          }
-        }}
-      >
-        <DialogContent className="sm:max-w-lg">
-          <DialogTitle className="text-xl font-bold text-center mb-4">
-            {results?.error ? "Evaluation Results (Partial)" : "Top Teams"}
-          </DialogTitle>
-          
-          {results?.error && (
-            <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-md p-4 mb-4">
-              <p>{results.error}</p>
-            </div>
-          )}
-          
-          {results?.leaderboard && results.leaderboard.length > 0 ? (
-            <div className="space-y-6">
-              {/* Top three teams with medals - Larger display */}
-              <div className="flex justify-evenly items-end">
-                {results.leaderboard.slice(0, 3).map((team, index) => {
-                  const position = index + 1;
-                  const height = position === 1 ? 'h-40' : position === 2 ? 'h-32' : 'h-28';
-                  const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : '🥉';
-                  
-                  return (
-                    <div key={team.team_name} className="flex flex-col items-center">
-                      <div className="text-4xl mb-3">{medal}</div>
-                      <div className={`${height} w-28 bg-purple-600 rounded-t-lg flex items-center justify-center`}>
-                        <span className="text-white text-xl font-bold">{team.total_score}</span>
-                      </div>
-                      <div className="bg-purple-100 w-28 p-3 text-center rounded-b-lg">
-                        <div className="font-medium">{team.team_name}</div>
-                      </div>
-                      <button 
-                        onClick={() => setSelectedTeam(team)}
-                        className="mt-3 text-sm bg-purple-100 hover:bg-purple-200 text-purple-800 font-semibold py-1 px-3 rounded"
+
+          {/* Selected filters with weightage */}
+          {filters.length > 0 && (
+            <div className="mb-6">
+              <h2 className="text-sm text-gray-600 mb-2">Selected Criteria:</h2>
+              <div className="flex flex-col gap-2">
+                {filters.map((filter, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-3 bg-purple-100 text-purple-700 px-4 py-2 rounded-lg"
+                  >
+                    <span className="flex-1">{filter.name}</span>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        value={filter.weightage}
+                        onChange={(e) => updateWeightage(filter.name, e.target.value)}
+                        className="w-20 h-8 text-sm"
+                        min="0"
+                        max="100"
+                      />
+                      <span className="text-sm">%</span>
+                      <button
+                        onClick={() => removeFilter(filter.name)}
+                        className="hover:text-purple-900 ml-2"
                       >
-                        View Details
+                        <X className="h-4 w-4" />
                       </button>
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
               
-              <div className="flex justify-between mt-4">
-                <Button
-                  onClick={() => {
-                    // Navigate to leaderboard page with criteria signature
-                    const criteriaSignature = filters.map(f => `${f.name}:${f.weightage}`).sort().join('|');
-                    navigate(`/leaderboard${selectedHackathonId ? `/${selectedHackathonId}` : ''}?criteria_signature=${encodeURIComponent(criteriaSignature)}`);
-                  }}
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                  View Full Leaderboard
-                </Button>
-                <Button
-                  onClick={() => setResults(null)}
-                  className="bg-purple-600 hover:bg-purple-700 text-white"
-                >
-                  Close
-                </Button>
+              {/* Total weightage display */}
+              <div className="mt-4 flex justify-between items-center px-4 py-2 bg-gray-100 rounded-lg">
+                <span className="font-medium">Total Weightage:</span>
+                <span className={`font-bold ${
+                  filters.reduce((sum, filter) => sum + filter.weightage, 0) === 100 
+                    ? 'text-green-600' 
+                    : 'text-red-600'
+                }`}>
+                  {filters.reduce((sum, filter) => sum + filter.weightage, 0)}%
+                </span>
               </div>
             </div>
-          ) : (
-            <div className="text-center py-8">
-              <p>No team evaluation results available yet.</p>
+          )}
+
+          {/* Suggested filters */}
+          <div>
+            <h2 className="text-sm text-gray-600 mb-2">Suggested Criteria:</h2>
+            <div className="flex flex-wrap gap-2">
+              {suggestedFilters.map((filter, index) => (
+                <button
+                  key={index}
+                  onClick={() => addFilter(filter)}
+                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-full transition-colors"
+                  disabled={filters.some(f => f.name === filter)}
+                >
+                  {filter}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Proceed button - Made more prominent */}
+          {filters.length > 0 && (
+            <div className="mt-8 flex justify-center">
               <Button 
-                onClick={() => setResults(null)} 
-                className="mt-4"
+                onClick={handleProceed} 
+                className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white"
+                disabled={filters.reduce((sum, filter) => sum + filter.weightage, 0) !== 100}
               >
-                Close
+                Proceed to Judge
+                <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
-      
-      {/* Team Evaluation Details Dialog */}
-      <Dialog 
-        open={selectedTeam !== null} 
-        onOpenChange={(open) => {
-          if (!open) setSelectedTeam(null);
-        }}
-      >
-        <DialogContent className="sm:max-w-lg">
-          <DialogTitle className="text-xl font-bold text-center mb-4">
-            {selectedTeam?.team_name} Evaluation
-          </DialogTitle>
-          
-          {selectedTeam && (
-            <div className="space-y-4">
-              <div className="flex justify-between items-center bg-purple-50 p-3 rounded-lg">
-                <span className="font-semibold">Overall Score:</span>
-                <span className="text-xl font-bold text-purple-700">{selectedTeam.total_score}</span>
-              </div>
-              
-              <div>
-                <h3 className="font-semibold mb-2">Individual Criteria Scores:</h3>
-                <div className="space-y-3">
-                  {selectedTeam.scores && Object.entries(selectedTeam.scores).map(([criterion, data]: [string, any]) => (
-                    <div key={criterion} className="bg-gray-50 p-3 rounded-lg">
-                      <div className="flex justify-between mb-1">
-                        <span className="font-medium">{criterion}</span>
-                        <div className="flex items-center">
-                          <span className="text-sm text-gray-500 mr-2">Weight: {Math.round(data.weight * 100)}%</span>
-                          <span className="font-semibold">{data.score}/5.0</span>
-                        </div>
-                      </div>
-                      <div className="relative h-2 bg-gray-200 rounded-full">
-                        <div 
-                          className="absolute h-2 bg-purple-500 rounded-full" 
-                          style={{ width: `${(data.score / 5) * 100}%` }}
-                        />
-                      </div>
-                      <p className="text-sm mt-2 text-gray-700">{data.feedback}</p>
-                    </div>
-                  ))}
+
+          {/* 
+            Loading Dialog - Only shown during loading or transition states 
+            Stays visible while transitioning to results
+          */}
+          <Dialog 
+            open={transitionState === 'loading' || transitionState === 'transition'}
+            onOpenChange={(open) => {
+              if (!open && transitionState !== 'results') {
+                setIsLoading(false);
+                setTransitionState('idle');
+              }
+            }}
+          >
+            <DialogContent className="sm:max-w-md flex flex-col items-center justify-center p-6 bg-white rounded-lg">
+              <DialogTitle className="sr-only">Loading</DialogTitle>
+              <div className="flex flex-col items-center space-y-4 py-6">
+                <div className="relative h-24 w-24">
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Loader className="h-10 w-10 text-purple-600 animate-spin" />
+                  </div>
+                  <Progress 
+                    className="h-4 w-full absolute bottom-0 bg-purple-100" 
+                    value={transitionState === 'transition' ? 100 : 66} 
+                  />
                 </div>
+                <p className="text-center text-lg font-medium mt-4">
+                  {transitionState === 'transition' ? 'Preparing Results...' : 'Evaluating Teams...'}
+                </p>
+                <p className="text-center text-gray-500">
+                  {transitionState === 'transition' 
+                    ? 'Almost there! Finalizing the leaderboard...'
+                    : 'Our AI is carefully reviewing each team\'s submission.'}
+                </p>
               </div>
+            </DialogContent>
+          </Dialog>
+          
+          {/* Results Dialog - Only shown in results state */}
+          <Dialog 
+            open={transitionState === 'results' && results !== null} 
+            onOpenChange={(open) => {
+              if (!open) {
+                // When results dialog is closed, reset everything
+                setResults(null);
+                setTransitionState('idle');
+                setSelectedTeam(null);
+              }
+            }}
+          >
+            <DialogContent className="sm:max-w-lg">
+              <DialogTitle className="text-xl font-bold text-center mb-4">
+                {results?.error ? "Evaluation Results (Partial)" : "Top Teams"}
+              </DialogTitle>
               
-              <Button
-                onClick={() => setSelectedTeam(null)}
-                className="w-full mt-4 bg-purple-600 hover:bg-purple-700 text-white"
-              >
-                Close
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+              {results?.error && (
+                <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-md p-4 mb-4">
+                  <p>{results.error}</p>
+                </div>
+              )}
+              
+              {results?.leaderboard && results.leaderboard.length > 0 ? (
+                <div className="space-y-6">
+                  {/* Top three teams with medals - Larger display */}
+                  <div className="flex justify-evenly items-end">
+                    {results.leaderboard.slice(0, 3).map((team, index) => {
+                      const position = index + 1;
+                      const height = position === 1 ? 'h-40' : position === 2 ? 'h-32' : 'h-28';
+                      const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : '🥉';
+                      
+                      return (
+                        <div key={team.team_name} className="flex flex-col items-center">
+                          <div className="text-4xl mb-3">{medal}</div>
+                          <div className={`${height} w-28 bg-purple-600 rounded-t-lg flex items-center justify-center`}>
+                            <span className="text-white text-xl font-bold">{team.total_score}</span>
+                          </div>
+                          <div className="bg-purple-100 w-28 p-3 text-center rounded-b-lg">
+                            <div className="font-medium">{team.team_name}</div>
+                          </div>
+                          <button 
+                            onClick={() => setSelectedTeam(team)}
+                            className="mt-3 text-sm bg-purple-100 hover:bg-purple-200 text-purple-800 font-semibold py-1 px-3 rounded"
+                          >
+                            View Details
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  <div className="flex justify-between mt-4">
+                    <Button
+                      onClick={() => {
+                        // Navigate to leaderboard page with criteria signature
+                        const criteriaSignature = filters.map(f => `${f.name}:${f.weightage}`).sort().join('|');
+                        navigate(`/leaderboard${selectedHackathonId ? `/${selectedHackathonId}` : ''}?criteria_signature=${encodeURIComponent(criteriaSignature)}`);
+                      }}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      View Full Leaderboard
+                    </Button>
+                    <Button
+                      onClick={() => setResults(null)}
+                      className="bg-purple-600 hover:bg-purple-700 text-white"
+                    >
+                      Close
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p>No team evaluation results available yet.</p>
+                  <Button 
+                    onClick={() => setResults(null)} 
+                    className="mt-4"
+                  >
+                    Close
+                  </Button>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+          
+          {/* Team Evaluation Details Dialog */}
+          <Dialog 
+            open={selectedTeam !== null} 
+            onOpenChange={(open) => {
+              if (!open) setSelectedTeam(null);
+            }}
+          >
+            <DialogContent className="sm:max-w-lg">
+              <DialogTitle className="text-xl font-bold text-center mb-4">
+                {selectedTeam?.team_name} Evaluation
+              </DialogTitle>
+              
+              {selectedTeam && (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center bg-purple-50 p-3 rounded-lg">
+                    <span className="font-semibold">Overall Score:</span>
+                    <span className="text-xl font-bold text-purple-700">{selectedTeam.total_score}</span>
+                  </div>
+                  
+                  <div>
+                    <h3 className="font-semibold mb-2">Individual Criteria Scores:</h3>
+                    <div className="space-y-3">
+                      {selectedTeam.scores && Object.entries(selectedTeam.scores).map(([criterion, data]: [string, any]) => (
+                        <div key={criterion} className="bg-gray-50 p-3 rounded-lg">
+                          <div className="flex justify-between mb-1">
+                            <span className="font-medium">{criterion}</span>
+                            <div className="flex items-center">
+                              <span className="text-sm text-gray-500 mr-2">Weight: {Math.round(data.weight * 100)}%</span>
+                              <span className="font-semibold">{data.score}/5.0</span>
+                            </div>
+                          </div>
+                          <div className="relative h-2 bg-gray-200 rounded-full">
+                            <div 
+                              className="absolute h-2 bg-purple-500 rounded-full" 
+                              style={{ width: `${(data.score / 5) * 100}%` }}
+                            />
+                          </div>
+                          <p className="text-sm mt-2 text-gray-700">{data.feedback}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <Button
+                    onClick={() => setSelectedTeam(null)}
+                    className="w-full mt-4 bg-purple-600 hover:bg-purple-700 text-white"
+                  >
+                    Close
+                  </Button>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+        </div>
+      </main>
     </div>
   );
 };

@@ -1,565 +1,265 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Loader2, Plus, FileText, ArrowRight, Search, Calendar } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Input } from '@/components/ui/input';
 import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogFooter,
-  DialogDescription
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
+  FilePlus2, 
+  BarChart3, 
+  Award, 
+  Trophy, 
+  FileText, 
+  Newspaper,
+  PlusCircle,
+  ArrowRight
+} from 'lucide-react';
 import Header from '@/components/Header';
-import apiService from '@/lib/api';
 import { useHackathonContext } from '@/contexts/HackathonContext';
-import axios from 'axios';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const Index = () => {
   const navigate = useNavigate();
-  const { selectedHackathonId, setSelectedHackathonId } = useHackathonContext();
-  
-  // States
-  const [isIngesting, setIsIngesting] = useState(false);
-  const [isIngestionComplete, setIsIngestionComplete] = useState(false);
-  const [hasTeamData, setHasTeamData] = useState(false);
-  const [isCheckingData, setIsCheckingData] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [hackathons, setHackathons] = useState([]);
-  const [isLoadingHackathons, setIsLoadingHackathons] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  
-  // New hackathon modal states
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [newHackathonName, setNewHackathonName] = useState('');
-  const [newHackathonStartDate, setNewHackathonStartDate] = useState('');
-  const [newHackathonEndDate, setNewHackathonEndDate] = useState('');
-  const [isCreatingHackathon, setIsCreatingHackathon] = useState(false);
-  const [createError, setCreateError] = useState('');
-
-  // Fetch hackathons when component mounts
-  useEffect(() => {
-    fetchHackathons();
-  }, []);
-
-  // Check if we have team data when the hackathon changes
-  useEffect(() => {
-    if (selectedHackathonId) {
-      checkForTeamData();
-    }
-  }, [selectedHackathonId]);
-
-  // Function to fetch hackathons
-  const fetchHackathons = async () => {
-    setIsLoadingHackathons(true);
-    try {
-      const response = await apiService.getHackathons();
-      if (Array.isArray(response)) {
-        setHackathons(response);
-        
-        // If no hackathon is selected and we have hackathons, select the first active one
-        if (!selectedHackathonId && response.length > 0) {
-          const activeHackathon = response.find(h => h.status === 'active') || response[0];
-          setSelectedHackathonId(activeHackathon.id);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching hackathons:', error);
-      setError('Failed to load hackathons. Please refresh the page.');
-    } finally {
-      setIsLoadingHackathons(false);
-    }
-  };
-
-  // Function to check if we have team data
-  const checkForTeamData = async () => {
-    setIsCheckingData(true);
-    setError(null);
-    
-    try {
-      // First try to get submissions
-      let hasSubmissions = false;
-      let hasTeamSummariesData = false;
-      
-      try {
-        const submissions = await apiService.getSubmissions(selectedHackathonId);
-        
-        if (Array.isArray(submissions) && submissions.length > 0) {
-          hasSubmissions = true;
-          setIsIngestionComplete(true);
-        }
-      } catch (submissionError) {
-        console.error('Error checking submissions:', submissionError);
-      }
-      
-      // Then try to get team summaries
-      try {
-        const response = await apiService.getTeamSummaries(selectedHackathonId);
-        
-        if (Array.isArray(response) && response.length > 0) {
-          hasTeamSummariesData = true;
-          setIsIngestionComplete(true);
-        }
-      } catch (summaryError) {
-        console.error('Error checking team summaries:', summaryError);
-      }
-      
-      // Update state based on what we found
-      if (hasTeamSummariesData || hasSubmissions) {
-        setHasTeamData(true);
-      } else {
-        setHasTeamData(false);
-        setIsIngestionComplete(false);
-      }
-    } catch (error) {
-      console.error('Error in checkForTeamData:', error);
-      setHasTeamData(false);
-      setIsIngestionComplete(false);
-    } finally {
-      setIsCheckingData(false);
-    }
-  };
-
-  // Handle data ingestion
-  const handleIngestData = async () => {
-    setIsIngesting(true);
-    setError(null);
-    try {
-      await apiService.startIngestion(selectedHackathonId);
-      
-      // Poll for completion
-      let attempts = 0;
-      const maxAttempts = 24; // Check for up to 2 minutes (24 * 5 seconds)
-      const pollInterval = 5000; // 5 seconds between checks
-      
-      const checkInterval = setInterval(async () => {
-        attempts++;
-        try {
-          const submissions = await apiService.getSubmissions(selectedHackathonId);
-          
-          // Check if we have any successful submissions
-          const successfulSubmissions = Array.isArray(submissions) && 
-            submissions.filter(s => s.status === 'success').length > 0;
-          
-          // Also check if we have any submissions in processing state
-          const processingSubmissions = Array.isArray(submissions) && 
-            submissions.filter(s => s.status === 'processing').length > 0;
-            
-          // If we have at least one successful submission, we can proceed
-          if (successfulSubmissions) {
-            clearInterval(checkInterval);
-            setIsIngestionComplete(true);
-            setIsIngesting(false);
-            // After successful ingestion, check for teams to generate summaries
-            handleAutoGenerateSummaries();
-          } 
-          // If we have processing submissions but reached max attempts, allow user to proceed
-          else if (processingSubmissions && attempts >= maxAttempts) {
-            clearInterval(checkInterval);
-            setIsIngestionComplete(true);
-            setIsIngesting(false);
-            setError('Ingestion is taking longer than expected but is still processing. You can proceed to the dashboard to monitor progress.');
-            setHasTeamData(false);
-          }
-          // If max attempts reached with no success or processing, consider it failed
-          else if (attempts >= maxAttempts) {
-            clearInterval(checkInterval);
-            setIsIngesting(false);
-            setIsIngestionComplete(false);
-            setError('No documents found in Google Drive. Please check the folder structure in Google Drive and ensure documents are available before starting ingestion.');
-          }
-        } catch (error) {
-          console.error('Error checking ingestion status:', error);
-          
-          // If we've had too many errors, stop polling
-          if (attempts >= maxAttempts) {
-            clearInterval(checkInterval);
-            setIsIngesting(false);
-            setError('Error checking ingestion status. Please try again later.');
-          }
-        }
-      }, pollInterval);
-    } catch (error) {
-      console.error('Error starting ingestion:', error);
-      setIsIngesting(false);
-      
-      // Error handling
-      if (axios.isAxiosError(error)) {
-        if (error.response) {
-          const errorMessage = error.response.data?.error || error.response.data?.message || 'Server error';
-          setError(`Error: ${errorMessage}`);
-        } else if (error.request) {
-          setError('No response from server. The server might be down or the request timed out.');
-        } else {
-          setError(`Failed to start data ingestion: ${error.message}`);
-        }
-      } else {
-        setError('Failed to start data ingestion. Please try again.');
-      }
-    }
-  };
-
-  // Navigate to dashboard
-  const handleGetStarted = () => {
-    navigate('/dashboard');
-  };
-  
-  // Create a new hackathon
-  const handleCreateHackathon = async () => {
-    // Validate fields
-    if (!newHackathonName.trim()) {
-      setCreateError('Hackathon name is required');
-      return;
-    }
-    
-    if (!newHackathonStartDate) {
-      setCreateError('Start date is required');
-      return;
-    }
-    
-    if (!newHackathonEndDate) {
-      setCreateError('End date is required');
-      return;
-    }
-    
-    // Check if end date is after start date
-    if (new Date(newHackathonEndDate) <= new Date(newHackathonStartDate)) {
-      setCreateError('End date must be after start date');
-      return;
-    }
-    
-    setIsCreatingHackathon(true);
-    setCreateError('');
-    
-    try {
-      // Create the hackathon object
-      const newHackathon = {
-        name: newHackathonName,
-        start_date: newHackathonStartDate,
-        end_date: newHackathonEndDate,
-        status: 'active'
-      };
-      
-      // Call API to create hackathon
-      const response = await apiService.createHackathon(newHackathon);
-      
-      // Refresh hackathon list
-      await fetchHackathons();
-      
-      // Select the newly created hackathon
-      if (response && response.id) {
-        setSelectedHackathonId(response.id);
-      }
-      
-      // Close modal and reset form
-      setIsCreateModalOpen(false);
-      resetCreateForm();
-      
-    } catch (error) {
-      console.error('Error creating hackathon:', error);
-      setCreateError('Failed to create hackathon. Please try again.');
-    } finally {
-      setIsCreatingHackathon(false);
-    }
-  };
-  
-  // Reset create hackathon form
-  const resetCreateForm = () => {
-    setNewHackathonName('');
-    setNewHackathonStartDate('');
-    setNewHackathonEndDate('');
-    setCreateError('');
-  };
-  
-  // Open create modal
-  const openCreateModal = () => {
-    resetCreateForm();
-    setIsCreateModalOpen(true);
-  };
-  
-  // Function to automatically start team summary generation
-  const handleAutoGenerateSummaries = async () => {
-    try {
-      const submissions = await apiService.getSubmissions(selectedHackathonId);
-      
-      if (Array.isArray(submissions) && submissions.length > 0) {
-        const teamNames = [...new Set(submissions.map(s => s.team_name))];
-        setError(`Found ${teamNames.length} teams. Click 'Generate Team Summaries' on the dashboard to generate summaries.`);
-      }
-    } catch (error) {
-      console.error('Error preparing for summary generation:', error);
-    }
-  };
-
-  // Get the selected hackathon name
-  const selectedHackathon = hackathons.find(h => h.id === selectedHackathonId);
-  
-  // Filter hackathons based on search query
-  const filteredHackathons = hackathons.filter(hackathon => 
-    hackathon.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const { selectedHackathon, selectedHackathonId, isLoading } = useHackathonContext();
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <Header />
-      <main className="flex-1 container mx-auto px-4 pt-20 pb-8">
-        <div className="max-w-lg mx-auto">
-          <h1 className="text-2xl font-bold mb-6">Hackathon Evaluation System</h1>
-          
-          {/* Hackathon Selection */}
-          <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">Select Hackathon</h2>
-              <Button 
-                onClick={openCreateModal}
-                variant="outline"
-                size="sm"
-                className="flex items-center"
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                New
-              </Button>
-            </div>
+      <main className="flex-1 container mx-auto px-4 py-12 md:py-16">
+        <div className="max-w-5xl mx-auto">
+          {/* Hero Section */}
+          <div className="text-center mb-16">
+            <h1 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-purple-600 to-blue-500 bg-clip-text text-transparent">
+              Hackathon AI Dashboard
+            </h1>
+            <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+              Generate insights, evaluate projects, and manage all your hackathon needs in one place.
+            </p>
             
-            {/* Search bar */}
-            <div className="relative mb-3">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
-              <Input
-                type="text"
-                placeholder="Search hackathons..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-            
-            {isLoadingHackathons ? (
-              <div className="flex items-center justify-center py-6">
-                <Loader2 className="h-5 w-5 animate-spin text-purple-600 mr-2" />
-                <span>Loading...</span>
-              </div>
-            ) : (
-              <div 
-                className="space-y-2 overflow-y-auto max-h-64 pr-1"
-                style={{ scrollbarWidth: 'thin' }}
-              >
-                {filteredHackathons.length === 0 ? (
-                  <div className="text-center py-6 text-gray-500">
-                    {hackathons.length === 0 
-                      ? "No hackathons found. Create your first hackathon to get started."
-                      : "No hackathons match your search."}
-                  </div>
-                ) : (
-                  filteredHackathons.map(hackathon => (
-                    <div 
-                      key={hackathon.id}
-                      className={`p-3 border rounded-md cursor-pointer flex justify-between items-center ${
-                        selectedHackathonId === hackathon.id 
-                          ? 'bg-purple-50 border-purple-200' 
-                          : 'hover:bg-gray-50'
-                      }`}
-                      onClick={() => setSelectedHackathonId(hackathon.id)}
-                    >
-                      <div>
-                        <div className="font-medium">{hackathon.name}</div>
-                        <div className="text-xs text-gray-500 flex items-center">
-                          <span className={`inline-block h-2 w-2 rounded-full mr-1 ${
-                            hackathon.status === 'active' ? 'bg-green-500' :
-                            hackathon.status === 'completed' ? 'bg-blue-500' :
-                            hackathon.status === 'upcoming' ? 'bg-yellow-500' : 'bg-gray-500'
-                          }`}></span>
-                          {hackathon.status}
-                          <span className="mx-1">•</span>
-                          <span>{hackathon.team_count || 0} teams</span>
-                          {hackathon.start_date && hackathon.end_date && (
-                            <>
-                              <span className="mx-1">•</span>
-                              <Calendar className="h-3 w-3 mr-1" />
-                              <span>{new Date(hackathon.start_date).toLocaleDateString()} - {new Date(hackathon.end_date).toLocaleDateString()}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                      
-                      {selectedHackathonId === hackathon.id && (
-                        <div className="text-xs text-purple-600 font-medium">Selected</div>
-                      )}
-                    </div>
-                  ))
-                )}
+            {!selectedHackathonId && !isLoading && (
+              <div className="flex justify-center mt-8">
+                <Button 
+                  onClick={() => navigate('/hackathons')}
+                  size="lg" 
+                  className="bg-purple-600 hover:bg-purple-700 gap-2"
+                >
+                  <PlusCircle className="h-5 w-5" />
+                  Create Your First Hackathon
+                </Button>
               </div>
             )}
           </div>
           
-          {/* Actions */}
-          {selectedHackathonId && (
-            <div className="bg-white p-6 rounded-lg shadow-sm">
-              <h2 className="text-lg font-semibold mb-3">
-                {selectedHackathon ? `${selectedHackathon.name}` : 'Next Steps'}
-              </h2>
-              
-              {/* Error message */}
-              {error && (
-                <Alert variant={error.includes('Found') ? 'default' : 'destructive'} className="mb-4 text-sm">
-                  <AlertDescription>
-                    {error}
-                    {error.includes('No documents found') && (
-                      <div className="mt-2 text-xs">
-                        <p><strong>Required Drive Structure:</strong></p>
-                        <ul className="list-disc pl-5 space-y-1 mt-1">
-                          <li>Each team folder (e.g., "TeamAlpha")</li>
-                          <li>Project folder inside (e.g., "ProjectAI")</li>
-                          <li>PDF documents in the project folders</li>
-                        </ul>
-                      </div>
-                    )}
-                  </AlertDescription>
-                </Alert>
-              )}
-              
-              {/* Loading state */}
-              {isCheckingData && (
-                <div className="flex items-center justify-center py-4">
-                  <Loader2 className="h-4 w-4 animate-spin text-purple-600 mr-2" />
-                  <span className="text-sm">Checking data...</span>
-                </div>
-              )}
-              
-              {!isCheckingData && (
-                <div className="space-y-3">
-                  {/* Step 1: Ingest Data (if not already done) */}
-                  {!isIngestionComplete && (
-                    <div className="flex items-center justify-between py-2 border-b">
-                      <div>
-                        <div className="text-sm font-medium flex items-center">
-                          <FileText className="h-3 w-3 mr-1 text-purple-600" />
-                          Ingest Team Documents
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          Process team submissions
-                        </div>
-                      </div>
-                      <Button 
-                        onClick={handleIngestData}
-                        disabled={isIngesting}
-                        size="sm"
-                      >
-                        {isIngesting ? (
-                          <>
-                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                            Ingesting...
-                          </>
-                        ) : "Start Ingestion"}
-                      </Button>
-                    </div>
-                  )}
-                  
-                  {/* Step 2: Go to Dashboard/Evaluation */}
-                  <div className="flex items-center justify-between py-2">
-                    <div>
-                      <div className="text-sm font-medium">
-                        {isIngestionComplete ? 
-                          "Documents ingested" : 
-                          "No documents ingested yet"}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {isIngestionComplete ? 
-                          (hasTeamData ? "Ready for evaluation" : "Processing data") : 
-                          "Ingest documents first or view dashboard"}
-                      </div>
-                    </div>
-                    <Button 
-                      onClick={handleGetStarted}
-                      variant={isIngestionComplete && hasTeamData ? "default" : "outline"}
-                      className={isIngestionComplete && hasTeamData ? "bg-green-600 hover:bg-green-700" : ""}
-                      size="sm"
-                    >
-                      <ArrowRight className="h-3 w-3 mr-1" />
-                      {isIngestionComplete ? "Continue" : "View Dashboard"}
-                    </Button>
+          {/* Loading state */}
+          {isLoading && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[...Array(6)].map((_, i) => (
+                <Card key={i} className="border border-gray-200 shadow-sm">
+                  <CardHeader className="pb-2">
+                    <Skeleton className="h-6 w-3/4 mb-2" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </CardHeader>
+                  <CardContent className="pb-6">
+                    <Skeleton className="h-24 w-full" />
+                  </CardContent>
+                  <CardFooter>
+                    <Skeleton className="h-9 w-full" />
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          )}
+          
+          {/* Main actions grid */}
+          {!isLoading && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Manage Hackathons */}
+              <Card className="border border-indigo-100 shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="pb-2">
+                  <div className="w-12 h-12 rounded-lg bg-indigo-100 flex items-center justify-center mb-2">
+                    <FilePlus2 className="h-6 w-6 text-indigo-600" />
                   </div>
-                </div>
-              )}
+                  <CardTitle>Manage Hackathons</CardTitle>
+                  <CardDescription>Create, view and manage your hackathons</CardDescription>
+                </CardHeader>
+                <CardContent className="text-sm text-gray-500">
+                  {selectedHackathon ? (
+                    <p>Currently selected: <span className="font-medium text-indigo-600">{selectedHackathon.name}</span></p>
+                  ) : (
+                    <p>No hackathon selected. Set up your first hackathon to get started.</p>
+                  )}
+                </CardContent>
+                <CardFooter>
+                  <Button asChild className="w-full bg-indigo-600 hover:bg-indigo-700">
+                    <Link to="/hackathons">
+                      <span className="flex items-center">
+                        Manage Hackathons
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </span>
+                    </Link>
+                  </Button>
+                </CardFooter>
+              </Card>
+              
+              {/* Dashboard */}
+              <Card className="border border-emerald-100 shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="pb-2">
+                  <div className="w-12 h-12 rounded-lg bg-emerald-100 flex items-center justify-center mb-2">
+                    <BarChart3 className="h-6 w-6 text-emerald-600" />
+                  </div>
+                  <CardTitle>Dashboard</CardTitle>
+                  <CardDescription>View project submissions and team data</CardDescription>
+                </CardHeader>
+                <CardContent className="text-sm text-gray-500">
+                  <p>Monitor hackathon progress, team submissions, and project status.</p>
+                </CardContent>
+                <CardFooter>
+                  <Button asChild className="w-full bg-emerald-600 hover:bg-emerald-700">
+                    <Link to="/dashboard">
+                      <span className="flex items-center">
+                        View Dashboard
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </span>
+                    </Link>
+                  </Button>
+                </CardFooter>
+              </Card>
+              
+              {/* Evaluation */}
+              <Card className="border border-amber-100 shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="pb-2">
+                  <div className="w-12 h-12 rounded-lg bg-amber-100 flex items-center justify-center mb-2">
+                    <Award className="h-6 w-6 text-amber-600" />
+                  </div>
+                  <CardTitle>Evaluation Criteria</CardTitle>
+                  <CardDescription>Set up judging criteria for evaluations</CardDescription>
+                </CardHeader>
+                <CardContent className="text-sm text-gray-500">
+                  <p>Configure custom evaluation criteria and scoring weights.</p>
+                </CardContent>
+                <CardFooter>
+                  <Button 
+                    asChild 
+                    className="w-full bg-amber-600 hover:bg-amber-700"
+                    disabled={!selectedHackathonId}
+                  >
+                    <Link to={`/judgement-criteria${selectedHackathonId ? `/${selectedHackathonId}` : ''}`}>
+                      <span className="flex items-center">
+                        Manage Criteria
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </span>
+                    </Link>
+                  </Button>
+                </CardFooter>
+              </Card>
+              
+              {/* Insights */}
+              <Card className="border border-blue-100 shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="pb-2">
+                  <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center mb-2">
+                    <BarChart3 className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <CardTitle>Hackathon Insights</CardTitle>
+                  <CardDescription>AI-generated insights about all projects</CardDescription>
+                </CardHeader>
+                <CardContent className="text-sm text-gray-500">
+                  <p>Get AI-powered analysis of trends, technologies, and themes across all projects.</p>
+                </CardContent>
+                <CardFooter>
+                  <Button 
+                    asChild 
+                    className="w-full bg-blue-600 hover:bg-blue-700"
+                    disabled={!selectedHackathonId}
+                  >
+                    <Link to={`/insights${selectedHackathonId ? `/${selectedHackathonId}` : ''}`}>
+                      <span className="flex items-center">
+                        View Insights
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </span>
+                    </Link>
+                  </Button>
+                </CardFooter>
+              </Card>
+              
+              {/* Team Blogs */}
+              <Card className="border border-purple-100 shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="pb-2">
+                  <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center mb-2">
+                    <Newspaper className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <CardTitle>Team Blogs</CardTitle>
+                  <CardDescription>AI-generated blog posts for each team</CardDescription>
+                </CardHeader>
+                <CardContent className="text-sm text-gray-500">
+                  <p>Generate professional blog posts summarizing each team's project and journey.</p>
+                </CardContent>
+                <CardFooter>
+                  <Button 
+                    asChild 
+                    className="w-full bg-purple-600 hover:bg-purple-700"
+                    disabled={!selectedHackathonId}
+                  >
+                    <Link to={`/team-blogs${selectedHackathonId ? `/${selectedHackathonId}` : ''}`}>
+                      <span className="flex items-center">
+                        View Team Blogs
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </span>
+                    </Link>
+                  </Button>
+                </CardFooter>
+              </Card>
+              
+              {/* Leaderboard */}
+              <Card className="border border-orange-100 shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="pb-2">
+                  <div className="w-12 h-12 rounded-lg bg-orange-100 flex items-center justify-center mb-2">
+                    <Trophy className="h-6 w-6 text-orange-600" />
+                  </div>
+                  <CardTitle>Leaderboard</CardTitle>
+                  <CardDescription>View team rankings and scores</CardDescription>
+                </CardHeader>
+                <CardContent className="text-sm text-gray-500">
+                  <p>See the current standings, team scores, and evaluation breakdowns.</p>
+                </CardContent>
+                <CardFooter>
+                  <Button 
+                    asChild 
+                    className="w-full bg-orange-600 hover:bg-orange-700"
+                    disabled={!selectedHackathonId}
+                  >
+                    <Link to={`/leaderboard${selectedHackathonId ? `/${selectedHackathonId}` : ''}`}>
+                      <span className="flex items-center">
+                        View Leaderboard
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </span>
+                    </Link>
+                  </Button>
+                </CardFooter>
+              </Card>
+            </div>
+          )}
+          
+          {/* Call to action */}
+          {selectedHackathonId && !isLoading && (
+            <div className="mt-16 text-center">
+              <p className="text-gray-500 mb-4">Need to start a new hackathon?</p>
+              <Button 
+                onClick={() => navigate('/hackathons')}
+                variant="outline" 
+                className="border-purple-200 text-purple-700 hover:bg-purple-50"
+              >
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Create New Hackathon
+              </Button>
             </div>
           )}
         </div>
       </main>
       
-      {/* Create Hackathon Modal */}
-      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New Hackathon</DialogTitle>
-            <DialogDescription>
-              Enter the details for your new hackathon.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-2">
-            {createError && (
-              <Alert variant="destructive" className="mb-4">
-                <AlertDescription>{createError}</AlertDescription>
-              </Alert>
-            )}
-            
-            <div className="space-y-2">
-              <Label htmlFor="hackathon-name">Hackathon Name</Label>
-              <Input
-                id="hackathon-name"
-                placeholder="e.g., Summer Hackathon 2025"
-                value={newHackathonName}
-                onChange={(e) => setNewHackathonName(e.target.value)}
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="start-date">Start Date</Label>
-                <Input
-                  id="start-date"
-                  type="date"
-                  value={newHackathonStartDate}
-                  onChange={(e) => setNewHackathonStartDate(e.target.value)}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="end-date">End Date</Label>
-                <Input
-                  id="end-date"
-                  type="date"
-                  value={newHackathonEndDate}
-                  onChange={(e) => setNewHackathonEndDate(e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setIsCreateModalOpen(false)}
-              disabled={isCreatingHackathon}
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleCreateHackathon} 
-              disabled={isCreatingHackathon}
-            >
-              {isCreatingHackathon ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Creating...
-                </>
-              ) : "Create Hackathon"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Footer */}
+      <footer className="mt-auto py-6 bg-gray-50 border-t border-gray-200">
+        <div className="container mx-auto px-4 text-center text-sm text-gray-500">
+          <p>Hackathon AI Evaluation System &copy; {new Date().getFullYear()}</p>
+        </div>
+      </footer>
     </div>
   );
 };

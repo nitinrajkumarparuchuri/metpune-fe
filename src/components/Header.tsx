@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Home, LayoutDashboard, LightbulbIcon, Award, Menu, X } from 'lucide-react';
+import { Home, LayoutDashboard, LightbulbIcon, Award, Menu, X, Grid } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 const Header = () => {
@@ -13,17 +13,17 @@ const Header = () => {
   // Navigation links
   const navLinks = [
     { path: '/', label: 'Home', icon: <Home className="h-4 w-4 mr-2" /> },
+    { path: '/index', label: 'Hub', icon: <Grid className="h-4 w-4 mr-2" /> },
     { path: '/hackathons', label: 'Hackathons', icon: <Award className="h-4 w-4 mr-2" /> },
     { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-4 w-4 mr-2" /> },
     { path: '/insights', label: 'Insights', icon: <LightbulbIcon className="h-4 w-4 mr-2" /> },
-    { path: '/judgement-criteria', label: 'Judging', icon: <Award className="h-4 w-4 mr-2" /> },
   ];
   
   return (
     <header className="fixed w-full top-0 bg-white/80 backdrop-blur-sm z-50 border-b">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          <Link to="/" className="flex items-center space-x-2">
+          <Link to="/index" className="flex items-center space-x-2">
             <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-500 bg-clip-text text-transparent">
               MetHack AI
             </span>
