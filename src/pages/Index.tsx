@@ -99,57 +99,9 @@ const Index = () => {
                 </CardFooter>
               </Card>
               
-              {/* Dashboard */}
-              <Card className="border border-emerald-100 shadow-sm hover:shadow-md transition-shadow">
-                <CardHeader className="pb-2">
-                  <div className="w-12 h-12 rounded-lg bg-emerald-100 flex items-center justify-center mb-2">
-                    <BarChart3 className="h-6 w-6 text-emerald-600" />
-                  </div>
-                  <CardTitle>Dashboard</CardTitle>
-                  <CardDescription>View project submissions and team data</CardDescription>
-                </CardHeader>
-                <CardContent className="text-sm text-gray-500">
-                  <p>Monitor hackathon progress, team submissions, and project status.</p>
-                </CardContent>
-                <CardFooter>
-                  <Button asChild className="w-full bg-emerald-600 hover:bg-emerald-700">
-                    <Link to="/dashboard">
-                      <span className="flex items-center">
-                        View Dashboard
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </span>
-                    </Link>
-                  </Button>
-                </CardFooter>
-              </Card>
+
               
-              {/* Evaluation */}
-              <Card className="border border-amber-100 shadow-sm hover:shadow-md transition-shadow">
-                <CardHeader className="pb-2">
-                  <div className="w-12 h-12 rounded-lg bg-amber-100 flex items-center justify-center mb-2">
-                    <Award className="h-6 w-6 text-amber-600" />
-                  </div>
-                  <CardTitle>Evaluation Criteria</CardTitle>
-                  <CardDescription>Set up judging criteria for evaluations</CardDescription>
-                </CardHeader>
-                <CardContent className="text-sm text-gray-500">
-                  <p>Configure custom evaluation criteria and scoring weights.</p>
-                </CardContent>
-                <CardFooter>
-                  <Button 
-                    asChild 
-                    className="w-full bg-amber-600 hover:bg-amber-700"
-                    disabled={!selectedHackathonId}
-                  >
-                    <Link to={`/judgement-criteria${selectedHackathonId ? `/${selectedHackathonId}` : ''}`}>
-                      <span className="flex items-center">
-                        Manage Criteria
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </span>
-                    </Link>
-                  </Button>
-                </CardFooter>
-              </Card>
+
               
               {/* Insights */}
               <Card className="border border-blue-100 shadow-sm hover:shadow-md transition-shadow">
@@ -207,33 +159,7 @@ const Index = () => {
                 </CardFooter>
               </Card>
               
-              {/* Leaderboard */}
-              <Card className="border border-orange-100 shadow-sm hover:shadow-md transition-shadow">
-                <CardHeader className="pb-2">
-                  <div className="w-12 h-12 rounded-lg bg-orange-100 flex items-center justify-center mb-2">
-                    <Trophy className="h-6 w-6 text-orange-600" />
-                  </div>
-                  <CardTitle>Leaderboard</CardTitle>
-                  <CardDescription>View team rankings and scores</CardDescription>
-                </CardHeader>
-                <CardContent className="text-sm text-gray-500">
-                  <p>See the current standings, team scores, and evaluation breakdowns.</p>
-                </CardContent>
-                <CardFooter>
-                  <Button 
-                    asChild 
-                    className="w-full bg-orange-600 hover:bg-orange-700"
-                    disabled={!selectedHackathonId}
-                  >
-                    <Link to={`/leaderboard${selectedHackathonId ? `/${selectedHackathonId}` : ''}`}>
-                      <span className="flex items-center">
-                        View Leaderboard
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </span>
-                    </Link>
-                  </Button>
-                </CardFooter>
-              </Card>
+
             </div>
           )}
           

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Loader } from 'lucide-react';
 import { useHackathonContext } from '@/contexts/HackathonContext';
+import { apiService } from '@/lib/api';
 
 const Leaderboard = () => {
   const navigate = useNavigate();
@@ -22,22 +23,11 @@ const Leaderboard = () => {
       try {
         // First try with criteria signature if available
         const hackathonId = selectedHackathonId;
-        let url = `/api/hackathons/${hackathonId}/leaderboard`;
         
-        if (criteriaSignature) {
-          url += `?criteria_signature=${encodeURIComponent(criteriaSignature)}`;
-        }
+        const data = await apiService.getLeaderboard(hackathonId);
         
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch leaderboard data');
-        }
-        
-        const data = await response.json();
-        
-        if (data.leaderboard && data.leaderboard.length > 0) {
-          setLeaderboardData(data.leaderboard);
+        if (data && data.length > 0) {
+          setLeaderboardData(data);
         } else {
           // If no results with criteria signature, try without it
           if (criteriaSignature) {

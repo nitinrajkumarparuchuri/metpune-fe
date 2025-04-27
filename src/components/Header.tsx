@@ -21,7 +21,6 @@ const Header = () => {
     { path: '/', label: 'Home', icon: <Home className="h-4 w-4 mr-2" /> },
     { path: '/index', label: 'Hub', icon: <Grid className="h-4 w-4 mr-2" /> },
     { path: '/hackathons', label: 'Hackathons', icon: <Award className="h-4 w-4 mr-2" /> },
-    { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-4 w-4 mr-2" /> },
     { path: '/insights', label: 'Insights', icon: <LightbulbIcon className="h-4 w-4 mr-2" /> },
   ];
   
